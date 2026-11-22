@@ -52,11 +52,12 @@ try:
                 if len(targets) >= 4:
                     break
         if not targets:
-            ep = currentProgram.getSymbolTable().getExternalEntryPointIterator()
-            if ep.hasNext():
-                func = getFunctionContaining(ep.next())
-                if func is not None:
-                    targets.append(("PE entry point", func))
+            # A stripped PE often has no meaningful named exports.
+            # Select one substantial *defined* function as a bounded smoke target.
+            for candidate in currentProgram.getFunctionManager().getFunctions(True):
+                if not candidate.isExternal() and candidate.getBody().getNumAddresses() >= 32:
+                    targets.append(("First substantial function (smoke)", candidate))
+                    break
         line("SMOKE mode: this verifies Ghidra decompilation on our own DLL, not the working reference.")
     seen = set()
     for label, func in targets[:5]:
