@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/ghidra-working-reference.yml'
       - 'd3d12.dll'
+      - 'scripts/trace_reference_player.py'
 
 permissions:
   contents: read
@@ -60,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p reports "$RUNNER_TEMP/ghidra-project"
-          "$GHIDRA_ROOT/support/analyzeHeadless" \
+          if ! "$GHIDRA_ROOT/support/analyzeHeadless" \
             "$RUNNER_TEMP/ghidra-project" w0uff-reference \
             -import "$RUNNER_TEMP/reference-input/d3d12.dll" \
             -scriptPath "$PWD/scripts" \
@@ -68,11 +69,17 @@ jobs:
             -analysisTimeoutPerFile 900 \
             -max-cpu 2 \
             -deleteProject \
-            > "$RUNNER_TEMP/ghidra-reference-console.log" 2>&1
+            > "$RUNNER_TEMP/ghidra-reference-console.log" 2>&1; then
+            echo "::error::Ghidra failed; last 70 console lines (technical only)"
+            tail -n 70 "$RUNNER_TEMP/ghidra-reference-console.log"
+            exit 1
+          fi
           test -s reports/reference-callgraph.txt
           grep -q 'REFERENCE_TRACE_DONE' reports/reference-callgraph.txt
           grep -E 'Executable:|Image base:|Functions discovered:|UI_SITE|DECOMPILATION_COMPLETED|REFERENCE_TRACE_DONE' \
             reports/reference-callgraph.txt | head -35
+          echo '=== Bounded reference trace (no third-party pseudocode) ==='
+          sed -n '1,160p' reports/reference-callgraph.txt
           echo 'Only an address/call-graph report will be published.'
 
       - name: Publish metadata-only Ghidra findings
