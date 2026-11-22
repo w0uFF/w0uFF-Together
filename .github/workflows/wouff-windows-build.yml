@@ -1,12 +1,9 @@
-name: w0uFF Together - Windows DLL
+name: w0uFF Together - Practice Studio (Windows DLL)
 on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/wouff-windows-build.yml'
-      - 'wouff-source.zip'
-      - 'wouff-vendor-1.zip'
-      - 'wouff-vendor-2.zip'
+      - 'wouff-source-v042.zip'
   workflow_dispatch:
 
 permissions:
@@ -18,13 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Expand source
+      - name: Expand updated source
         shell: bash
         run: |
           set -euo pipefail
-          unzip -q -o wouff-source.zip
-          unzip -q -o wouff-vendor-1.zip
-          unzip -q -o wouff-vendor-2.zip
+          test -f wouff-source-v042.zip || { echo 'Upload wouff-source-v042.zip first'; exit 1; }
+          unzip -q -o wouff-source-v042.zip
+          test -f w0uFF-Together/NOTICE.md
           test -f w0uFF-Together/CMakeLists.txt
       - name: Configure tests
         run: cmake -S w0uFF-Together -B build-tests -DWOUFF_TESTS_ONLY=ON
@@ -34,20 +31,20 @@ jobs:
         run: ctest --test-dir build-tests --output-on-failure
 
   build:
-    name: Compile Windows x64
+    name: Compile w0uFF Together Windows x64
     needs: unit_tests
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      - name: Expand source and vendored dependencies
+      - name: Expand updated source and vendored dependencies
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          foreach ($part in @('wouff-source.zip', 'wouff-vendor-1.zip', 'wouff-vendor-2.zip')) {
+          foreach ($part in @('wouff-source-v042.zip', 'wouff-vendor-1.zip', 'wouff-vendor-2.zip')) {
             if (!(Test-Path $part)) { throw "Missing archive: $part" }
             Expand-Archive -Path $part -DestinationPath '.' -Force
           }
-          if (!(Test-Path 'w0uFF-Together/CMakeLists.txt')) { throw 'Missing project source' }
+          if (!(Test-Path 'w0uFF-Together/NOTICE.md')) { throw 'Updated source package missing' }
       - name: Configure MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -60,7 +57,7 @@ jobs:
         run: cmake -S w0uFF-Together -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFINAL=YES -DWOUFF_USE_VENDORED_DEPS=ON -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DLUA_USE_LUAJIT=OFF
       - name: Compile DLL
         shell: pwsh
-        run: cmake --build build --config RelWithDebInfo --target UnchainedTogether
+        run: cmake --build build --config RelWithDebInfo --target w0uFFTogether
       - name: Validate and stage artifact
         shell: pwsh
         run: |
@@ -78,10 +75,10 @@ jobs:
           New-Item -Type Directory -Path dist -Force | Out-Null
           Copy-Item $dll dist/d3d12.dll
           Get-FileHash dist/d3d12.dll -Algorithm SHA256 | Format-List
-          Write-Host 'Unverified DLL compiled. In-game validation still required.'
+          Write-Host 'Compilation complete. Gameplay compatibility remains UNVERIFIED.'
       - name: Publish DLL artifact
         uses: actions/upload-artifact@v4
         with:
-          name: w0uFF-Together-Windows-DLL-unverified
+          name: w0uFF-Together-v0.4.2-Windows-DLL-unverified
           path: dist/d3d12.dll
           if-no-files-found: error
