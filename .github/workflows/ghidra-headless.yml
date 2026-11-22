@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/ghidra-headless.yml'
       - 'scripts/wouff_ghidra_headless.py'
+      - 'scripts/trace_reference_player.py'
 
 permissions:
   contents: read
@@ -67,6 +68,24 @@ jobs:
           grep -q '^TARGET:' reports/ghidra-smoke.txt
           grep -q '^TARGET:' reports/ghidra-smoke.txt && echo 'Decompiler produced at least one function target'
           grep -E 'File:|Function count:|TARGET:|ANALYSIS_DONE' reports/ghidra-smoke.txt
+      - name: Smoke-test reference trace script APIs on our own DLL only
+        shell: bash
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          "$GHIDRA_ROOT/support/analyzeHeadless" \
+            "$RUNNER_TEMP/ghidra-projects" wouff-trace-smoke \
+            -import "$PWD/analysis_input/d3d12.dll" \
+            -scriptPath "$PWD/scripts" \
+            -postScript trace_reference_player.py "$PWD/reports/reference-trace-api-smoke.txt" smoke \
+            -analysisTimeoutPerFile 900 \
+            -max-cpu 2 \
+            -deleteProject \
+            > "$RUNNER_TEMP/trace-smoke-console.log" 2>&1
+          test -s reports/reference-trace-api-smoke.txt
+          grep -q '^SMOKE_TRACE_DONE' reports/reference-trace-api-smoke.txt
+          grep -q '^FUNCTION ' reports/reference-trace-api-smoke.txt
+          echo 'Reference-trace script API smoke test passed (no working reference DLL analyzed).'
       - name: Upload verified Ghidra analysis report
         if: always()
         uses: actions/upload-artifact@v4
