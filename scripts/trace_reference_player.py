@@ -63,21 +63,30 @@ try:
              "LocalPlayers", "GetPlayerCharacter", "IsLocalPlayerController"]
     matching_string_addresses = {}
     scanned = 0
-    for data in DefinedDataIterator.definedStrings(currentProgram):
-        scanned += 1
-        if scanned > 150000:
-            emit("STRING_SCAN_LIMIT")
-            break
-        value = unicode(data.getValue())
-        for term in terms:
-            if term.lower() in value.lower() and len(value) < 200:
-                entry = str(data.getAddress())
-                if entry not in matching_string_addresses:
-                    matching_string_addresses[entry] = term
-                if len(matching_string_addresses) >= 100:
-                    break
-        if len(matching_string_addresses) >= 100:
-            break
+    try:
+        iterator = DefinedDataIterator.definedStrings(currentProgram)
+        for data in iterator:
+            scanned += 1
+            if scanned > 150000:
+                emit("STRING_SCAN_LIMIT")
+                break
+            try:
+                value = unicode(data.getValue())
+            except Exception:
+                continue
+            for term in terms:
+                if term.lower() in value.lower() and len(value) < 200:
+                    entry = str(data.getAddress())
+                    if entry not in matching_string_addresses:
+                        matching_string_addresses[entry] = term
+                    if len(matching_string_addresses) >= 100:
+                        break
+            if len(matching_string_addresses) >= 100:
+                break
+    except Exception as e:
+        # Bad/missing Ghidra string iterator must not block Fly-site analysis.
+        emit("STRING_SCAN_ERROR " + str(e))
+    writer.flush()
 
     emit("STRINGS_SCANNED %d" % scanned)
     for entry, term in sorted(matching_string_addresses.items()):
@@ -104,7 +113,7 @@ try:
     dec = DecompInterface()
     dec.openProgram(currentProgram)
     seen = set()
-    queue = [(f, 0) for f in targets.values()][:16]
+    queue = [(f, 0) for f in targets.values()][:8]
     emitted = 0
     for f, depth in queue:
         key = str(f.getEntryPoint())
@@ -112,7 +121,7 @@ try:
             continue
         seen.add(key)
         emitted += 1
-        if emitted > 24:
+        if emitted > 12:
             emit("FUNCTION_LIMIT")
             break
         emit("FUNCTION %s name=%s size=%s depth=%d" % (
@@ -132,7 +141,7 @@ try:
         # We do not export decompiled C from a third-party binary into a public artifact.
         # Keyword presence in reconstructed expressions only, not a claim of actual calls.
         if depth == 0:
-            result = dec.decompileFunction(f, 90, monitor)
+            result = dec.decompileFunction(f, 35, monitor)
             if result.decompileCompleted():
                 df = result.getDecompiledFunction()
                 pseudo = df.getC() if df else ""
