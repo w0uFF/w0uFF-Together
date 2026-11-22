@@ -1,0 +1,110 @@
+name: w0uFF - Private reference DLL Ghidra trace
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-working-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout only analysis scripts
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Download original reference privately and verify exact SHA256
+        env:
+          REF_URL: ${{ secrets.WOUFF_REFERENCE_ZIP_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$REF_URL" ]; then
+            echo "::error::Repository secret WOUFF_REFERENCE_ZIP_URL is missing; no analysis performed."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/reference-input"
+          # Do not echo the signed URL. GitHub logs and outputs must not contain it.
+          curl --silent --show-error --fail --location \
+            --proto '=https' --proto-redir '=https' \
+            --connect-timeout 25 --max-time 240 \
+            --retry 1 --max-filesize 65000000 \
+            "$REF_URL" -o "$RUNNER_TEMP/reference-download"
+          python3 - "$RUNNER_TEMP/reference-download" "$RUNNER_TEMP/reference-input/d3d12.dll" <<'PY'
+          import sys,hashlib,zipfile,os
+          src,dst=sys.argv[1:]
+          expected="b9055133ce5c28397e3fcd285cc4ba30268da0bfc0c1e82d5555ecf0aff0ac4f"
+          if zipfile.is_zipfile(src):
+              with zipfile.ZipFile(src) as archive:
+                  names=[info for info in archive.infolist()
+                         if not info.is_dir() and os.path.basename(info.filename).lower()=="d3d12.dll"]
+                  if len(names)!=1 or names[0].file_size>65000000:
+                      raise SystemExit("Reference ZIP must contain exactly one reasonably sized d3d12.dll")
+                  data=archive.read(names[0])
+          else:
+              with open(src,"rb") as f:
+                  data=f.read()
+          digest=hashlib.sha256(data).hexdigest()
+          if digest!=expected:
+              raise SystemExit("Wrong reference DLL SHA256: this is not the verified working binary")
+          if not data.startswith(b"MZ"):
+              raise SystemExit("Input was not a PE binary")
+          with open(dst,"wb") as f:
+              f.write(data)
+          print("Verified reference identity SHA256:",digest)
+          print("Verified reference length:",len(data))
+          PY
+          rm -f "$RUNNER_TEMP/reference-download"
+
+      - name: Install verified Ghidra 11.4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 2 \
+            'https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.4.3_build/ghidra_11.4.3_PUBLIC_20251203.zip' \
+            -o "$RUNNER_TEMP/ghidra.zip"
+          echo 'b22a8baebb14339f19903c54363ba7e01781930cc43ab430539aabce0d58547a  '"$RUNNER_TEMP/ghidra.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/ghidra.zip" -d "$RUNNER_TEMP"
+          GHIDRA_ROOT="$RUNNER_TEMP/ghidra_11.4.3_PUBLIC"
+          test -f "$GHIDRA_ROOT/support/analyzeHeadless"
+          echo "GHIDRA_ROOT=$GHIDRA_ROOT" >> "$GITHUB_ENV"
+
+      - name: Analyze exact reference (no binary or pseudocode upload)
+        shell: bash
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          mkdir -p reports "$RUNNER_TEMP/ghidra-project"
+          "$GHIDRA_ROOT/support/analyzeHeadless" \
+            "$RUNNER_TEMP/ghidra-project" w0uff-reference \
+            -import "$RUNNER_TEMP/reference-input/d3d12.dll" \
+            -scriptPath "$PWD/scripts" \
+            -postScript trace_reference_player.py "$PWD/reports/reference-callgraph.txt" \
+            -analysisTimeoutPerFile 900 \
+            -max-cpu 2 \
+            -deleteProject \
+            > "$RUNNER_TEMP/ghidra-reference-console.log" 2>&1
+          test -s reports/reference-callgraph.txt
+          grep -q 'REFERENCE_TRACE_DONE' reports/reference-callgraph.txt
+          grep -E 'Executable:|Image base:|Functions discovered:|UI_SITE|DECOMPILATION_COMPLETED|REFERENCE_TRACE_DONE' \
+            reports/reference-callgraph.txt | head -35
+          echo 'Only an address/call-graph report will be published.'
+
+      - name: Publish metadata-only Ghidra findings
+        uses: actions/upload-artifact@v4
+        with:
+          name: w0uFF-reference-Fly-PlayerResolver-callgraph
+          path: reports/reference-callgraph.txt
+          if-no-files-found: error
+
+      - name: Destroy downloaded reference from runner workspace
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/reference-input" "$RUNNER_TEMP/reference-download" "$RUNNER_TEMP/ghidra-project"
