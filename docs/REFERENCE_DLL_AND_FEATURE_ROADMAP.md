@@ -1,3 +1,11 @@
+> **CURRENT PRIORITY — P0 PLAYER RESOLVER ONLY (2026-11-22):** Suspend Hitbox Debug changes, Chain ON/OFF and Partner Glow development. First fix detection of the local PlayerController and local Pawn, then verify Fly F7 in solo and co-op. No additional gameplay feature is to be enabled by default.
+>
+> **Latest in-game result (v0.4.3):** 5,397 Unreal tick callbacks, 0 snapshot read failures, 21,588 local resolver exceptions, World/level FOUND/FOUND, controller path 0, pawn path 0, controller/pawn NOT FOUND. The exactly 4:1 exception/tick ratio narrows the regression to candidate resolver calls but **does not identify which of the separate guarded routes fault**.
+>
+> **Code inspected:** v0.4.3 `src/gui/gui.cpp` uses `UWorld->OwningGameInstance->LocalPlayers`, `UGameplayStatics::GetPlayerController` and a local-controller actor fallback, followed by `pc->Pawn`, `K2_GetPawn`, `UGameplayStatics::GetPlayerPawn/GetPlayerCharacter` and matching local-controller actor fallback. Each route catches SEH but increments the same `g_resolver_faults` counter, erasing the failing route identity. The next correction should attribute exceptions per route and capture their exception codes, then validate a safe lookup against the user-provided working DLL; do not guess offsets or use a remote co-op pawn.
+>
+> **Exit criterion:** Controller FOUND, local pawn FOUND, Fly F7 acts on that pawn after manual activation, all mod features OFF at startup. Follow with private co-op regression testing.
+
 # Reference DLL research and requested features
 
 ## Scope and evidence
