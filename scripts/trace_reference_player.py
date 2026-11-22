@@ -64,7 +64,9 @@ try:
     matching_string_addresses = {}
     scanned = 0
     try:
-        iterator = DefinedDataIterator.definedStrings(currentProgram)
+        # Only known Fly-site xrefs are necessary for the first reference pass.
+        # Full definedStrings iteration on a 15MB third-party PE can OOM Ghidra.
+        iterator = [] if mode == "reference" else DefinedDataIterator.definedStrings(currentProgram)
         for data in iterator:
             scanned += 1
             if scanned > 150000:
@@ -88,7 +90,7 @@ try:
         emit("STRING_SCAN_ERROR " + str(e))
     writer.flush()
 
-    emit("STRINGS_SCANNED %d" % scanned)
+    emit("STRINGS_SCANNED %d (reference mode uses verified Fly xrefs instead)" % scanned)
     for entry, term in sorted(matching_string_addresses.items()):
         addr = toAddr(entry)
         refs = getReferencesTo(addr)
@@ -113,7 +115,7 @@ try:
     dec = DecompInterface()
     dec.openProgram(currentProgram)
     seen = set()
-    queue = [(f, 0) for f in targets.values()][:8]
+    queue = [(f, 0) for f in targets.values()][:4]
     emitted = 0
     for f, depth in queue:
         key = str(f.getEntryPoint())
