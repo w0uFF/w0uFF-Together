@@ -7,8 +7,11 @@ from ghidra.program.util import DefinedDataIterator
 from java.io import BufferedWriter, OutputStreamWriter, FileOutputStream
 
 args = getScriptArgs()
-if len(args) != 1:
-    raise ValueError("Output text path required")
+if len(args) < 1 or len(args) > 2:
+    raise ValueError("Output path and optional smoke/reference mode required")
+mode = args[1] if len(args) == 2 else "reference"
+if mode not in ("smoke", "reference"):
+    raise ValueError("Unsupported mode")
 writer = BufferedWriter(OutputStreamWriter(FileOutputStream(args[0]), "UTF-8"))
 
 def emit(txt):
@@ -19,9 +22,10 @@ try:
     emit("w0uFF - reference DLL reverse engineering observations")
     emit("OBSERVATIONAL ONLY. Reconstructed symbols/calls are not original source.")
     emit("Executable: " + currentProgram.getName())
+    emit("Analysis mode: " + mode)
     emit("Image base: " + str(currentProgram.getImageBase()))
     emit("Functions discovered: " + str(currentProgram.getFunctionManager().getFunctionCount()))
-    if str(currentProgram.getImageBase()).lower() != "180000000":
+    if mode == "reference" and str(currentProgram.getImageBase()).lower() != "180000000":
         raise RuntimeError("Unexpected image base, cannot apply the reference addresses")
 
     # These addresses have been identified in the exact user-supplied binary,
@@ -35,7 +39,7 @@ try:
         ("Fly Mode##2", "180cd5b40"),
     ]
     targets = {}
-    for label, hexaddr in fly_sites:
+    for label, hexaddr in (fly_sites if mode == "reference" else []):
         addr = toAddr(hexaddr)
         f = getFunctionContaining(addr)
         if f:
@@ -44,7 +48,7 @@ try:
         else:
             emit("UNRESOLVED_SITE %s %s" % (label, hexaddr))
 
-    for label, hexaddr in data_sites:
+    for label, hexaddr in (data_sites if mode == "reference" else []):
         addr = toAddr(hexaddr)
         emit("STRING_SITE %s at %s" % (label, addr))
         for ref in getReferencesTo(addr):
@@ -92,6 +96,11 @@ try:
             if caller:
                 targets[str(caller.getEntryPoint())] = caller
 
+    if mode == "smoke":
+        for function in currentProgram.getFunctionManager().getFunctions(True):
+            if not function.isExternal() and function.getBody().getNumAddresses() >= 32:
+                targets[str(function.getEntryPoint())] = function
+                break
     dec = DecompInterface()
     dec.openProgram(currentProgram)
     seen = set()
@@ -132,6 +141,6 @@ try:
                 emit("  DECOMPILATION_COMPLETED")
             else:
                 emit("  DECOMPILATION_ERROR " + str(result.getErrorMessage()))
-    emit("REFERENCE_TRACE_DONE")
+    emit("REFERENCE_TRACE_DONE" if mode == "reference" else "SMOKE_TRACE_DONE")
 finally:
     writer.close()
