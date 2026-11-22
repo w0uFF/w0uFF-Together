@@ -74,6 +74,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Patch cannot be applied' }
           git apply runtime-v043.patch
           if ($LASTEXITCODE -ne 0) { throw 'Patch failed to apply' }
+          # checkout on Windows may convert text patch LF to CRLF; canonicalize before hashing.
+          python -c "from pathlib import Path; p=Path('patches/v043-msvc-build-fix.patch'); p.write_bytes(p.read_bytes().replace(bytes([13,10]),bytes([10])))"
           if ((Get-FileHash patches/v043-msvc-build-fix.patch -Algorithm SHA256).Hash.ToLowerInvariant() -ne '6a314c956be5fe734c1e313751fcc753be88ca5e0ea72ca525d855996b2928c6') { throw 'MSVC patch digest mismatch' }
           git apply --check patches/v043-msvc-build-fix.patch
           if ($LASTEXITCODE -ne 0) { throw 'MSVC patch cannot be applied' }
