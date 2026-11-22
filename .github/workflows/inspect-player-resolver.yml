@@ -24,6 +24,8 @@ jobs:
         run: |
           set -euo pipefail
           echo '=== RESOLVER CODE: GUI CPP 410-880 ==='
-          sed -n '410,880{=;p;}' w0uFF-Together/src/gui/gui.cpp
+          sed -n '95,270p' w0uFF-Together/src/gui/gui.cpp
+          echo '=== SNAPSHOT AND DIAGNOSTIC UI 860-1380 ==='
+          sed -n '860,1380p' w0uFF-Together/src/gui/gui.cpp
           echo '=== RESOLVER + TICK SYMBOL USES ==='
-          rg -n "local_resolver|local_controller|resolve_.*pawn|GetPlayerController|GetPlayerPawn|GetPlayerCharacter|LocalPlayers|GetFirstPlayerController|IsLocalController|wouff.*tick|Local player controller" w0uFF-Together/src/gui w0uFF-Together/src/main.cpp | head -120 || true
+          grep -nE "local_resolver|local_controller|resolve_.*pawn|GetPlayerController|GetPlayerPawn|GetPlayerCharacter|LocalPlayers|GetFirstPlayerController|IsLocalController|wouff.*tick|Local player controller" w0uFF-Together/src/gui w0uFF-Together/src/main.cpp | head -120 || true
