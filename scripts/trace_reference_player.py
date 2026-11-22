@@ -37,6 +37,7 @@ try:
     data_sites = [
         ("Fly Mode", "180cd5908"),
         ("Fly Mode##2", "180cd5b40"),
+        ("Fly setting key", "180cd5360"),
     ]
     targets = {}
     for label, hexaddr in (fly_sites if mode == "reference" else []):
@@ -149,6 +150,28 @@ try:
                 pseudo = df.getC() if df else ""
                 found = [term for term in terms if term.lower() in pseudo.lower()]
                 emit("  PSEUDOCODE_KEYWORDS " + ",".join(found))
+                # Small context excerpts in the user's private repository artifact:
+                # these are decompiler guesses, NOT original C++ source.
+                candidates = ("fly mode", "fly_mode", "chained_together_fly",
+                              "flymode", "180cd5908", "180cd5b40", "180cd5360")
+                lines = pseudo.splitlines()
+                highlighted = set()
+                windows = 0
+                for i, val in enumerate(lines):
+                    if not any(word in val.lower() for word in candidates):
+                        continue
+                    left = max(0, i - 7)
+                    right = min(len(lines), i + 18)
+                    if windows >= 8:
+                        emit("  FLY_EXCERPT_LIMIT")
+                        break
+                    windows += 1
+                    emit("  FLY_EXCERPT around reconstructed line %d" % (i + 1))
+                    for k in range(left, right):
+                        if k not in highlighted:
+                            highlighted.add(k)
+                            emit("  PSEUDO_LINE %d %s" % (k + 1, lines[k][:260]))
+                emit("  FLY_EXCERPT_WINDOWS %d" % windows)
                 emit("  DECOMPILATION_COMPLETED")
             else:
                 emit("  DECOMPILATION_ERROR " + str(result.getErrorMessage()))
