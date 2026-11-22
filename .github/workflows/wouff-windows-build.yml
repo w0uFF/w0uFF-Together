@@ -1,28 +1,90 @@
-name: w0uFF Together - Practice Studio (Windows DLL)
+name: w0uFF Together - v0.4.2 Windows DLL
 on:
   push:
     branches: [main]
     paths:
-      - 'wouff-source-v042.zip'
+      - '.github/workflows/wouff-windows-build.yml'
+      - 'patches/v042.part*'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  unit_tests:
-    name: Portable C++ tests
+  publish_source:
+    name: Reconstruct and publish v0.4.2 source ZIP
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Expand updated source
+      - name: Reconstruct source from verified patch
         shell: bash
         run: |
           set -euo pipefail
-          test -f wouff-source-v042.zip || { echo 'Upload wouff-source-v042.zip first'; exit 1; }
+          python3 - <<'PY'
+          import base64, hashlib, lzma, pathlib, subprocess, zipfile
+          root = pathlib.Path('.')
+          encoded = ''.join((root/'patches'/f'v042.part{i:02d}').read_text() for i in range(1,8))
+          assert len(encoded) == 15340, 'Source delta incomplete'
+          assert hashlib.sha256(encoded.encode()).hexdigest() == '5609665b094253a270b40f143832fba2ab48488cff30aac6373cd3444b231ac1', 'Source delta corrupt'
+          patch = lzma.decompress(base64.b64decode(encoded))
+          assert hashlib.sha256(patch).hexdigest() == '1d15af8d9050b1599d82ff460f6d49967efd9a2cc99c19ea2c9ce6d25fc5d94c', 'Patch digest mismatch'
+          old = root/'wouff-source.zip'
+          with zipfile.ZipFile(old) as archive:
+              assert archive.testzip() is None
+              archive.extractall(root)
+              entries = {n for n in archive.namelist() if not n.endswith('/')}
+          pathlib.Path('v042.patch').write_bytes(patch)
+          subprocess.run(['git','apply','--check','v042.patch'],check=True)
+          subprocess.run(['git','apply','v042.patch'],check=True)
+          entries.add('w0uFF-Together/NOTICE.md')
+          digest = hashlib.sha256()
+          for n in sorted(entries):
+              contents = (root/n).read_bytes()
+              digest.update(n.encode('utf-8'))
+              digest.update(b'\\0')
+              digest.update(hashlib.sha256(contents).digest())
+          expected = 'a3c6e5d6674b8c763a7abfedd6888f84eb2d9316cc4d96796c1b771c3fbcef22'
+          assert digest.hexdigest() == expected, 'Reconstructed source does not match original v0.4.2 file contents'
+          output = root/'wouff-source-v042.zip'
+          with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as out:
+              for n in sorted(entries):
+                  out.write(root/n,n)
+          with zipfile.ZipFile(output) as verify:
+              assert verify.testzip() is None and len(verify.namelist()) == 1525
+          print(f'Validated {len(entries)} exact source files; archive {output.stat().st_size} bytes')
+          PY
+      - name: Commit source ZIP to w0uFF-Together
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add wouff-source-v042.zip
+          git commit -m 'Publish verified w0uFF Together v0.4.2 source archive'
+          git push origin HEAD:main
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w0uFF-Together-v0.4.2-source
+          path: wouff-source-v042.zip
+          if-no-files-found: error
+
+  unit_tests:
+    name: Portable C++ tests v0.4.2
+    needs: publish_source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: w0uFF-Together-v0.4.2-source
+      - name: Expand updated sources
+        shell: bash
+        run: |
+          set -euo pipefail
           unzip -q -o wouff-source-v042.zip
           test -f w0uFF-Together/NOTICE.md
-          test -f w0uFF-Together/CMakeLists.txt
       - name: Configure tests
         run: cmake -S w0uFF-Together -B build-tests -DWOUFF_TESTS_ONLY=ON
       - name: Compile tests
@@ -31,11 +93,14 @@ jobs:
         run: ctest --test-dir build-tests --output-on-failure
 
   build:
-    name: Compile w0uFF Together Windows x64
+    name: Build Windows x64 DLL v0.4.2
     needs: unit_tests
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: w0uFF-Together-v0.4.2-source
       - name: Expand updated source and vendored dependencies
         shell: pwsh
         run: |
@@ -44,40 +109,39 @@ jobs:
             if (!(Test-Path $part)) { throw "Missing archive: $part" }
             Expand-Archive -Path $part -DestinationPath '.' -Force
           }
-          if (!(Test-Path 'w0uFF-Together/NOTICE.md')) { throw 'Updated source package missing' }
-      - name: Configure MSVC
+          if (!(Test-Path 'w0uFF-Together/NOTICE.md')) { throw 'Updated source missing' }
+      - name: Configure MSVC x64
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: amd64
-      - name: Validate pinned local dependencies
+      - name: Validate pinned dependencies
         shell: pwsh
         run: cmake -S w0uFF-Together -B check-deps -DWOUFF_VALIDATE_DEPS_ONLY=ON -DWOUFF_USE_VENDORED_DEPS=ON
       - name: Configure CMake
         shell: pwsh
         run: cmake -S w0uFF-Together -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFINAL=YES -DWOUFF_USE_VENDORED_DEPS=ON -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DLUA_USE_LUAJIT=OFF
-      - name: Compile DLL
+      - name: Compile w0uFF Together DLL
         shell: pwsh
         run: cmake --build build --config RelWithDebInfo --target w0uFFTogether
-      - name: Validate and stage artifact
+      - name: Inspect and stage DLL
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $dll = 'build/d3d12_.dll'
-          if (!(Test-Path $dll)) { throw 'DLL missing after build' }
+          if (!(Test-Path $dll)) { throw 'No DLL produced' }
           $pe = [IO.File]::ReadAllBytes($dll)
           if ($pe.Length -lt 1024 -or $pe[0] -ne 77 -or $pe[1] -ne 90) { throw 'Missing MZ header' }
           $offset = [BitConverter]::ToInt32($pe, 0x3C)
-          if ($offset -lt 64 -or ($offset + 6) -gt $pe.Length) { throw 'Bad PE header offset' }
+          if ($offset -lt 64 -or $offset + 6 -gt $pe.Length) { throw 'Bad PE header offset' }
           if ([Text.Encoding]::ASCII.GetString($pe, $offset, 4) -ne "PE`0`0") { throw 'Missing PE header' }
           if ([BitConverter]::ToUInt16($pe, $offset + 4) -ne 0x8664) { throw 'Not an x64 PE' }
           $exports = (& dumpbin /exports $dll | Out-String)
-          if ($LASTEXITCODE -ne 0 -or $exports -notmatch 'D3D12CreateDevice') { throw 'DX12 proxy export missing' }
-          New-Item -Type Directory -Path dist -Force | Out-Null
+          if ($LASTEXITCODE -ne 0 -or $exports -notmatch 'D3D12CreateDevice') { throw 'Missing DirectX 12 proxy export' }
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
           Copy-Item $dll dist/d3d12.dll
           Get-FileHash dist/d3d12.dll -Algorithm SHA256 | Format-List
-          Write-Host 'Compilation complete. Gameplay compatibility remains UNVERIFIED.'
-      - name: Publish DLL artifact
-        uses: actions/upload-artifact@v4
+          Write-Host 'Compiled Windows DLL; GAMEPLAY COMPATIBILITY NOT YET VERIFIED'
+      - uses: actions/upload-artifact@v4
         with:
           name: w0uFF-Together-v0.4.2-Windows-DLL-unverified
           path: dist/d3d12.dll
