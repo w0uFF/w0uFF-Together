@@ -43,7 +43,7 @@ jobs:
           for n in sorted(entries):
               contents = (root/n).read_bytes()
               digest.update(n.encode('utf-8'))
-              digest.update(b'\\0')
+              digest.update(bytes([0]))
               digest.update(hashlib.sha256(contents).digest())
           expected = 'a3c6e5d6674b8c763a7abfedd6888f84eb2d9316cc4d96796c1b771c3fbcef22'
           assert digest.hexdigest() == expected, 'Reconstructed source does not match original v0.4.2 file contents'
