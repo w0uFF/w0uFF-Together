@@ -59,6 +59,26 @@ try:
             if caller:
                 targets[str(caller.getEntryPoint())] = caller
 
+    # Verified in working PE disassembly: Fly Mode##2 supplies this address as
+    # a UI checkbox's state pointer. Cross-references may expose the real
+    # runtime reader/writer, but interpretation requires further validation.
+    for label, hexaddr in ([("Fly UI state candidate", "180e80fa0")]
+                           if mode == "reference" else []):
+        addr = toAddr(hexaddr)
+        emit("STATE_SITE %s at %s" % (label, addr))
+        ref_count = 0
+        for ref in getReferencesTo(addr):
+            if ref_count >= 60:
+                emit("STATE_XREF_LIMIT")
+                break
+            ref_count += 1
+            caller = getFunctionContaining(ref.getFromAddress())
+            emit("STATE_XREF %s from %s type %s function %s" %
+                 (label, ref.getFromAddress(), ref.getReferenceType(),
+                  caller.getEntryPoint() if caller else "(none)"))
+            if caller:
+                targets[str(caller.getEntryPoint())] = caller
+
     # Ghidra's defined strings are a *lead*, not proof of API calls.
     terms = ["SetFlyMode", "GetPlayerController", "GetPlayerPawn",
              "LocalPlayers", "GetPlayerCharacter", "IsLocalPlayerController"]
