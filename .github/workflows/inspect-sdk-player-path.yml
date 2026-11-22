@@ -63,6 +63,8 @@ jobs:
           sed -n '78120,78310p' "$SDK_DIR/Engine_functions.cpp"
           echo '### UObject::IsA definitions'
           sed -n '90,155p' "$SDK_DIR/CoreUObject_functions.cpp"
+          echo '### Player resolver exact SDK offsets and nearby fields'
+          grep -n -B 6 -A 6 -E 'OwningGameInstance;|LocalPlayers;|PlayerController;|class APawn\*.*Pawn;' "$SDK_DIR/Engine_classes.hpp" | head -190 || true
           echo '### UGameInstance, LocalPlayer, UWorld field-offset declarations'
           python3 - "$SDK_DIR/Engine_classes.hpp" <<'PY2'
           from pathlib import Path
