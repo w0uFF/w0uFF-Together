@@ -1,0 +1,21 @@
+--- a/w0uFF-Together/src/gui/gui.cpp
++++ b/w0uFF-Together/src/gui/gui.cpp
+@@ -1033,7 +1033,7 @@
+                     {
+                         ImGui::TextColored(ImVec4(.78f,.55f,1.f,1.f), "CUT PRACTICE / CHECKPOINTS");
+                         ImGui::TextWrapped("20 practice slots. Capture a safe start point, then use F8 to repeat it.");
+-                        ImGui::TextDisabled("Co-op synchronization is not implemented. Teleport affects your local pawn only.");
++                        ImGui::TextWrapped("Co-op worked in the previous working DLL. This build still needs a multiplayer test; checkpoints target your character.");
+                         if (!wouff::feature_registry::enabled(wouff::feature_id::teleport))
+                             ImGui::TextWrapped("Enable the Teleport module in Settings first.");
+                         else
+--- a/w0uFF-Together/README.md
++++ b/w0uFF-Together/README.md
+@@ -19,7 +19,7 @@
+ 2. Verify tick callbacks increase and `Local pawn` shows FOUND before enabling Fly/Teleport.
+ 3. Enable Fly; test in a private solo game with `F7`. Disable before returning to normal play.
+ 4. Enable Teleport; capture and recall a safe position with `F8`.
+-5. Only then test co-op in a private lobby: chain state is not automatically synchronized.
++5. Only then test co-op in a private lobby. The earlier working DLL was reported to support co-op; checkpoint/chain behavior in this new build has not yet been verified.
+ 
+ If `Unreal tick callbacks: 0`, or if no pawn is detected, **do not attempt repeated gameplay actions**. Report the numbers and status.
