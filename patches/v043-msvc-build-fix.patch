@@ -1,0 +1,14 @@
+--- a/w0uFF-Together/src/gui/gui.cpp
++++ b/w0uFF-Together/src/gui/gui.cpp
+@@ -679,7 +679,10 @@
+             auto* candidate = SDK::UGameplayStatics::GetPlayerCharacter(world, 0);
+             if (candidate && candidate->IsA(SDK::ABP_Character_C::StaticClass()))
+             {
+-                pawn = static_cast<SDK::ABP_Character_C*>(candidate);
++                // Generated SDK exposes ACharacter and ABP_Character_C as
++                // unrelated C++ types; runtime IsA above validates this
++                // same-address cast before the blueprint wrapper is used.
++                pawn = reinterpret_cast<SDK::ABP_Character_C*>(candidate);
+                 *source = 4;
+             }
+         }
