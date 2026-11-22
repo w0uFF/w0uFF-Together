@@ -38,3 +38,17 @@ Correlate failing routes with the generated SDK definitions and, if possible, th
 ## Subsequent UI request — deferred until Player Resolver is fixed
 
 When the practice menu is OPEN, constrain the mouse cursor to the actual **Chained Together client area** on the active monitor to avoid accidental movement onto a second display and loss of mouse-wheel jump input. On menu close, focus loss, alt-tab, window resize/move, game shutdown, or UI error, restore the original cursor clipping state immediately. Respect DPI and borderless/windowed modes; never force a permanent global lock or steal focus. Implement and test only **after** local PlayerController/Pawn detection and Fly have been verified. All existing feature defaults remain unchanged.
+## SDK review — newly confirmed generated wrapper behavior
+
+A dedicated GitHub Actions inspection (run `45066719449`) read the actual C++ SDK bundled with the project. This SDK identifies itself as `Dumper-7_5.3.2-29314046+++UE5+Release-5.3-ChainedTogether` and uses a generated wrapper for `UGameplayStatics::GetPlayerController(world, 0)`. The wrapper does:
+
+```cpp
+if (Func == nullptr)
+    Func = StaticClass()->GetFunction("GameplayStatics", "GetPlayerController");
+auto Flags = Func->FunctionFlags; // no null check here
+GetDefaultObj()->ProcessEvent(Func, &Parms);
+```
+
+**Evidence:** in-game v0.4.4 C2/P3/P4 all throw `0xC0000005` (access violation), while C1 LocalPlayers has no exception but never returns a controller, and C3 LocalActor throws `0xE06D7363` (MSVC C++ exception). This wrapper **could** fault if `Func` or its class/instance is invalid; it is not proof of which pointer is invalid. Never treat `World FOUND` as proof that the generated SDK offsets and reflection wrappers remain valid for game 1.11.2. There is a concrete risk that older SDK metadata has drifted. Do not retry broken wrappers repeatedly without new evidence. Preserve local-only checks for co-op.
+
+The working reference DLL was identified on the Nexus Mods `UnchainedTogether (Updated)` page, version 2, dated 2026-11-09; the original source and PDB are still unavailable. **Do not reupload that third-party DLL to a public repo.** GitHub Actions Ghidra currently only confirmed analysis of our own DLL, not that reference.
