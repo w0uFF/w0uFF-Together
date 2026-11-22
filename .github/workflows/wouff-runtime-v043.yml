@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/wouff-runtime-v043.yml'
       - 'patches/runtime-v043.patch.gz.b64'
+      - 'patches/v043-msvc-build-fix.patch'
   workflow_dispatch:
 
 permissions:
@@ -28,6 +29,9 @@ jobs:
           echo "9b8e20da517a24a07c2fc0e433495c0867ef4a6f5b7a6136f4c2e40267490dc6  runtime-v043.patch" | sha256sum -c -
           git apply --check runtime-v043.patch
           git apply runtime-v043.patch
+          echo "6a314c956be5fe734c1e313751fcc753be88ca5e0ea72ca525d855996b2928c6  patches/v043-msvc-build-fix.patch" | sha256sum -c -
+          git apply --check patches/v043-msvc-build-fix.patch
+          git apply patches/v043-msvc-build-fix.patch
           test -f w0uFF-Together/NOTICE.md
       - name: Configure and build portable tests
         run: |
@@ -70,6 +74,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Patch cannot be applied' }
           git apply runtime-v043.patch
           if ($LASTEXITCODE -ne 0) { throw 'Patch failed to apply' }
+          if ((Get-FileHash patches/v043-msvc-build-fix.patch -Algorithm SHA256).Hash.ToLowerInvariant() -ne '6a314c956be5fe734c1e313751fcc753be88ca5e0ea72ca525d855996b2928c6') { throw 'MSVC patch digest mismatch' }
+          git apply --check patches/v043-msvc-build-fix.patch
+          if ($LASTEXITCODE -ne 0) { throw 'MSVC patch cannot be applied' }
+          git apply patches/v043-msvc-build-fix.patch
+          if ($LASTEXITCODE -ne 0) { throw 'MSVC patch failed to apply' }
       - name: Initialize MSVC x64 toolchain
         uses: ilammy/msvc-dev-cmd@v1
         with:
