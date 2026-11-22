@@ -35,3 +35,20 @@ Current regression: v0.4.2 rendered the menu, recorded 46,366 Unreal tick callba
 4. Implement actual reversible chain mechanics and test multiplayer authority/replication before a stable release.
 
 Maintain GPL-3.0 attribution for reused sources; keep the w0uFF-branded UI.
+
+
+## Binary disassembly notes (22 Nov 2026)
+
+Read-only analysis of the actual supplied working `d3d12.dll` confirms the following concrete PE addresses (image base `0x180000000`):
+
+- `Fly Mode` text: `0x180CD5908`; referenced by instruction at `0x180062BA0`.
+- `Fly Mode##2` text: `0x180CD5B40`; referenced by instruction at `0x180063FC4`.
+- Both instructions lie in one large UI function with exception-directory extent `0x180061AA0..0x180064670`.
+- The `GetPlayerController` and `GetPlayerPawn` names exist as strings, but could be reflected SDK metadata. **These strings do not prove that the reference DLL uses those APIs.**
+- The matching `d3d12.pdb` is absent; the binary cannot be reconstructed as exact original C++ source.
+
+For deeper call-graph and pseudocode analysis, the tested compatible Ghidra package is the official `ghidra_11.4.3_PUBLIC_20251203.zip` (456,551,841 bytes, SHA-256 `b22a8baebb14339f19903c54363ba7e01781930cc43ab430539aabce0d58547a`). This is a decompiler; its output remains reconstructed pseudocode. Java 21 is already available for local analysis; no Java download is requested.
+
+### Windows build hotfix
+
+The initial v0.4.3 Windows build failed at `gui.cpp:682` with MSVC C2440 converting SDK `ACharacter*` to `ABP_Character_C*`; patch `patches/v043-msvc-build-fix.patch` changes the conversion following an explicit runtime `IsA` check. Three portable tests pass. Git checkout on Windows also changed patch line endings; the workflow now normalizes to LF before verifying SHA-256. The Windows DLL must still successfully compile and be tested in game before claiming Fly is repaired.
