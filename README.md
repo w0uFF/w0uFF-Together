@@ -1,4 +1,4 @@
-# w0uFF Together
+# w0uFF Together (an attempt to update unchained together by xiaoxiao921)
 
 **Practice Studio for Chained Together** — Windows x64 (DirectX 12).
 
