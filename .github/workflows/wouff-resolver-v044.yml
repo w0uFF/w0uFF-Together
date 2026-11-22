@@ -1,0 +1,124 @@
+name: w0uFF Together v0.4.4 - Player Resolver Diagnostics
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wouff-resolver-v044.yml'
+      - 'scripts/instrument_player_resolver_v044.py'
+      - 'patches/runtime-v043.patch.gz.b64'
+      - 'patches/v043-msvc-build-fix.patch'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Verify route diagnostics + portable tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unpack source and decode checked patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q wouff-source-v042.zip
+          python -c "import pathlib,base64,gzip; pathlib.Path('runtime-v043.patch').write_bytes(gzip.decompress(base64.b64decode(pathlib.Path('patches/runtime-v043.patch.gz.b64').read_bytes())))"
+          echo "9b8e20da517a24a07c2fc0e433495c0867ef4a6f5b7a6136f4c2e40267490dc6  runtime-v043.patch" | sha256sum -c -
+          git apply --check runtime-v043.patch
+          git apply runtime-v043.patch
+          echo "6a314c956be5fe734c1e313751fcc753be88ca5e0ea72ca525d855996b2928c6  patches/v043-msvc-build-fix.patch" | sha256sum -c -
+          git apply --check patches/v043-msvc-build-fix.patch
+          git apply patches/v043-msvc-build-fix.patch
+          python3 scripts/instrument_player_resolver_v044.py
+          test -f w0uFF-Together/NOTICE.md
+      - name: Configure and build portable tests
+        run: |
+          cmake -S w0uFF-Together -B build-tests -DWOUFF_TESTS_ONLY=ON
+          cmake --build build-tests --parallel 2
+          ctest --test-dir build-tests --output-on-failure
+      - name: Package patched GPL source
+        shell: bash
+        run: zip -q -r wouff-source-v044.zip w0uFF-Together
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w0uFF-Together-v0.4.4-source
+          path: wouff-source-v044.zip
+          if-no-files-found: error
+
+  build:
+    name: Compile Windows x64 v0.4.4 diagnostics
+    needs: tests
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Expand source and pinned dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($part in @('wouff-source-v042.zip', 'wouff-vendor-1.zip', 'wouff-vendor-2.zip')) {
+            if (!(Test-Path $part)) { throw "Missing source archive $part" }
+            Expand-Archive -Path $part -DestinationPath '.' -Force
+          }
+      - name: Verify and apply v0.4.3 patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python -c "import pathlib,base64,gzip; pathlib.Path('runtime-v043.patch').write_bytes(gzip.decompress(base64.b64decode(pathlib.Path('patches/runtime-v043.patch.gz.b64').read_bytes())))"
+          if ((Get-FileHash runtime-v043.patch -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9b8e20da517a24a07c2fc0e433495c0867ef4a6f5b7a6136f4c2e40267490dc6') { throw 'Patch digest mismatch' }
+          git apply --check runtime-v043.patch
+          if ($LASTEXITCODE -ne 0) { throw 'Patch cannot be applied' }
+          git apply runtime-v043.patch
+          if ($LASTEXITCODE -ne 0) { throw 'Patch failed to apply' }
+          # checkout on Windows may convert text patch LF to CRLF; canonicalize before hashing.
+          python -c "from pathlib import Path; p=Path('patches/v043-msvc-build-fix.patch'); p.write_bytes(p.read_bytes().replace(bytes([13,10]),bytes([10])))"
+          if ((Get-FileHash patches/v043-msvc-build-fix.patch -Algorithm SHA256).Hash.ToLowerInvariant() -ne '6a314c956be5fe734c1e313751fcc753be88ca5e0ea72ca525d855996b2928c6') { throw 'MSVC patch digest mismatch' }
+          git apply --check patches/v043-msvc-build-fix.patch
+          if ($LASTEXITCODE -ne 0) { throw 'MSVC patch cannot be applied' }
+          git apply patches/v043-msvc-build-fix.patch
+          if ($LASTEXITCODE -ne 0) { throw 'MSVC patch failed to apply' }
+      - name: Instrument and verify per-route diagnostics
+        shell: pwsh
+        run: python scripts/instrument_player_resolver_v044.py
+      - name: Initialize MSVC x64 toolchain
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+      - name: Validate offline dependencies
+        shell: pwsh
+        run: cmake -S w0uFF-Together -B check-deps -DWOUFF_VALIDATE_DEPS_ONLY=ON -DWOUFF_USE_VENDORED_DEPS=ON
+      - name: Configure Windows DLL
+        shell: pwsh
+        run: cmake -S w0uFF-Together -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFINAL=YES -DWOUFF_USE_VENDORED_DEPS=ON -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DLUA_USE_LUAJIT=OFF
+      - name: Compile DLL
+        shell: pwsh
+        run: cmake --build build --config RelWithDebInfo --target w0uFFTogether
+      - name: Verify x64 proxy and stage DLL
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dll = 'build/d3d12_.dll'
+          if (!(Test-Path $dll)) { throw 'Build completed without DLL' }
+          $bytes = [IO.File]::ReadAllBytes($dll)
+          if ($bytes.Length -lt 1024 -or $bytes[0] -ne 77 -or $bytes[1] -ne 90) { throw 'Invalid MZ header' }
+          $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+          if ($peOffset -lt 64 -or ($peOffset + 6) -gt $bytes.Length) { throw 'Invalid PE offset' }
+          if ([Text.Encoding]::ASCII.GetString($bytes, $peOffset, 4) -ne "PE`0`0") { throw 'Invalid PE signature' }
+          if ([BitConverter]::ToUInt16($bytes, $peOffset + 4) -ne 0x8664) { throw 'Not x64' }
+          $exports = (& dumpbin /exports $dll | Out-String)
+          if ($LASTEXITCODE -ne 0 -or $exports -notmatch 'D3D12CreateDevice') { throw 'Missing DX12 proxy export' }
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Copy-Item $dll dist/d3d12.dll
+          Get-FileHash dist/d3d12.dll -Algorithm SHA256 | Format-List
+          Write-Host 'DLL compiled but gameplay and co-op remain UNVERIFIED'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w0uFF-Together-v0.4.4-Windows-DLL-unverified
+          path: dist/d3d12.dll
+          if-no-files-found: error
