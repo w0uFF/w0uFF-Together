@@ -64,7 +64,9 @@ jobs:
             2>&1 | tee reports/ghidra-console.log
           test -s reports/ghidra-smoke.txt
           grep -q ANALYSIS_DONE reports/ghidra-smoke.txt
-          grep -E 'File:|Function count:|ANALYSIS_DONE' reports/ghidra-smoke.txt
+          grep -q '^TARGET:' reports/ghidra-smoke.txt
+          grep -q '^TARGET:' reports/ghidra-smoke.txt && echo 'Decompiler produced at least one function target'
+          grep -E 'File:|Function count:|TARGET:|ANALYSIS_DONE' reports/ghidra-smoke.txt
       - name: Upload verified Ghidra analysis report
         if: always()
         uses: actions/upload-artifact@v4
