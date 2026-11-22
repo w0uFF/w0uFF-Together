@@ -51,3 +51,28 @@ jobs:
                   if hits>=8: break
             print("MATCH_COUNT_CAPPED",hits)
           PY
+      - name: Print exact generated SDK calls, class layouts and world getter
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_DIR="$(find w0uFF-Together/src -type d -path '*/CppSDK/SDK' | head -1)"
+          test -d "$SDK_DIR"
+          echo '### Basic.hpp get world'
+          sed -n '36,90p' "$SDK_DIR/Basic.hpp"
+          echo '### GameplayStatics generated wrapper GetPlayerController'
+          sed -n '78120,78310p' "$SDK_DIR/Engine_functions.cpp"
+          echo '### UObject::IsA definitions'
+          sed -n '90,155p' "$SDK_DIR/CoreUObject_functions.cpp"
+          echo '### UGameInstance, LocalPlayer, UWorld field-offset declarations'
+          python3 - "$SDK_DIR/Engine_classes.hpp" <<'PY2'
+          from pathlib import Path
+          import re,sys
+          l=Path(sys.argv[1]).read_text(errors="replace").splitlines()
+          pats=[r"^class UGameInstance\s*:",r"^class ULocalPlayer\s*:",r"^class UWorld\s*:",r"^class APlayerController\s*:",r"^class UGameplayStatics\s*:"]
+          for pat in pats:
+            match=next((i for i,s in enumerate(l) if re.search(pat,s)),None)
+            print("\nCLASS",pat,"LINE",match+1 if match is not None else "NOT FOUND")
+            if match is not None:
+              for j in range(match,min(len(l),match+80)):
+                print(str(j+1)+": "+l[j][:190])
+          PY2
