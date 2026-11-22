@@ -1,0 +1,25 @@
+name: Read-only working reference Fly xrefs assembly
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/disassemble-reference-fly.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect-fly-sites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate reference SHA and analyze local code neighborhoods
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'b9055133ce5c28397e3fcd285cc4ba30268da0bfc0c1e82d5555ecf0aff0ac4f  d3d12.dll' | sha256sum -c -
+          echo '=== Fly Mode UI site A at 180062ba0 ==='
+          objdump -D -M intel --start-address=0x180062a80 --stop-address=0x180062e20 d3d12.dll | tail -n 145
+          echo '=== Fly Mode UI site B at 180063fc4 ==='
+          objdump -D -M intel --start-address=0x180063ee0 --stop-address=0x180064190 d3d12.dll | tail -n 135
+          echo '=== reference imports (names only) ==='
+          objdump -p d3d12.dll | grep -E 'DLL Name:|GetProcAddress|GetModuleHandle' | head -70 || true
