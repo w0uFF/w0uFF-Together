@@ -1,0 +1,29 @@
+name: Inspect v0.4.3 player resolver source
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/inspect-player-resolver.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct player resolver code
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q wouff-source-v042.zip
+          python3 -c "import base64,gzip,pathlib; pathlib.Path('runtime-v043.patch').write_bytes(gzip.decompress(base64.b64decode(pathlib.Path('patches/runtime-v043.patch.gz.b64').read_bytes())))"
+          git apply runtime-v043.patch
+          git apply patches/v043-msvc-build-fix.patch
+      - name: Inspect resolver and usages
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== RESOLVER CODE: GUI CPP 410-880 ==='
+          sed -n '410,880{=;p;}' w0uFF-Together/src/gui/gui.cpp
+          echo '=== RESOLVER + TICK SYMBOL USES ==='
+          rg -n "local_resolver|local_controller|resolve_.*pawn|GetPlayerController|GetPlayerPawn|GetPlayerCharacter|LocalPlayers|GetFirstPlayerController|IsLocalController|wouff.*tick|Local player controller" w0uFF-Together/src/gui w0uFF-Together/src/main.cpp | head -120 || true
