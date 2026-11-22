@@ -1,0 +1,53 @@
+name: Inspect generated Unreal player-resolution SDK
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-sdk-player-path.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract published sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q -o wouff-source-v042.zip
+          test -f w0uFF-Together/CMakeLists.txt
+      - name: Locate SDK types and function definitions (read-only)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path("w0uFF-Together")
+          targets = [
+            r"\bclass UWorld\b", r"\bclass UGameInstance\b", r"\bclass ULocalPlayer\b",
+            r"\bclass UGameplayStatics\b", r"\bclass APlayerController\b",
+            r"\bGetPlayerController\s*\(", r"\bGetPlayerPawn\s*\(",
+            r"\bGetPlayerCharacter\s*\(", r"\bGetWorld\s*\(",
+            r"\bIsA\s*\(", r"\bFindObject\s*\(",
+          ]
+          pats=[re.compile(p) for p in targets]
+          files=sorted(p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in (".hpp",".h",".cpp",".inl"))
+          print("SDK_SOURCE_FILES",len(files))
+          for needle,pat in zip(targets,pats):
+            print("\n=== TYPE OR SYMBOL",needle,"===")
+            hits=0
+            for p in files:
+              if hits>=8: break
+              try: raw=p.read_text(encoding="utf-8",errors="replace").splitlines()
+              except Exception: continue
+              for i,line in enumerate(raw):
+                if pat.search(line):
+                  print("FILE",p,"LINE",i+1)
+                  for k in range(max(0,i-2),min(len(raw),i+9)):
+                    print("%d: %s"%(k+1,raw[k][:220]))
+                  hits+=1
+                  if hits>=8: break
+            print("MATCH_COUNT_CAPPED",hits)
+          PY
