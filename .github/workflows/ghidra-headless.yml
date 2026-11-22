@@ -1,0 +1,74 @@
+name: w0uFF - Ghidra headless verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ghidra-headless.yml'
+      - 'scripts/wouff_ghidra_headless.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  ghidra-smoke:
+    name: Verify Ghidra on our v0.4.4 DLL
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout analysis scripts
+        uses: actions/checkout@v4
+      - name: Java 21 for Ghidra 11.4.3
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Retrieve our compiled DLL from successful Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: w0uFF-Together-v0.4.4-Windows-DLL-unverified
+          run-id: 45064321997
+          github-token: ${{ github.token }}
+          path: analysis_input
+      - name: Download and authenticate official Ghidra archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ghidra-dist"
+          curl --fail --location --retry 3 --retry-delay 4 --connect-timeout 30 \
+            'https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.4.3_build/ghidra_11.4.3_PUBLIC_20251203.zip' \
+            -o "$RUNNER_TEMP/ghidra-11.4.3.zip"
+          echo 'b22a8baebb14339f19903c54363ba7e01781930cc43ab430539aabce0d58547a  '"$RUNNER_TEMP/ghidra-11.4.3.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/ghidra-11.4.3.zip" -d "$RUNNER_TEMP/ghidra-dist"
+          GHIDRA_ROOT="$(find "$RUNNER_TEMP/ghidra-dist" -maxdepth 2 -type f -name ghidraRun -printf '%h\n' | head -1)"
+          test -n "$GHIDRA_ROOT" && test -f "$GHIDRA_ROOT/support/analyzeHeadless"
+          echo "GHIDRA_ROOT=$GHIDRA_ROOT" >> "$GITHUB_ENV"
+          echo "Verified Ghidra root: $GHIDRA_ROOT"
+      - name: Execute Ghidra on our compiled DLL (read-only)
+        shell: bash
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          test -s analysis_input/d3d12.dll
+          mkdir -p reports "$RUNNER_TEMP/ghidra-projects"
+          chmod +x "$GHIDRA_ROOT/support/analyzeHeadless"
+          "$GHIDRA_ROOT/support/analyzeHeadless" \
+            "$RUNNER_TEMP/ghidra-projects" wouff-analysis \
+            -import "$PWD/analysis_input/d3d12.dll" \
+            -scriptPath "$PWD/scripts" \
+            -postScript wouff_ghidra_headless.py "$PWD/reports/ghidra-smoke.txt" smoke \
+            -analysisTimeoutPerFile 900 \
+            -max-cpu 2 \
+            -deleteProject \
+            2>&1 | tee reports/ghidra-console.log
+          test -s reports/ghidra-smoke.txt
+          grep -q ANALYSIS_DONE reports/ghidra-smoke.txt
+          grep -E 'File:|Function count:|ANALYSIS_DONE' reports/ghidra-smoke.txt
+      - name: Upload verified Ghidra analysis report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w0uFF-Ghidra-11.4.3-smoke-report
+          path: reports/
+          if-no-files-found: warn
