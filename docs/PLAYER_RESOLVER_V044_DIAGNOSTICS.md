@@ -34,3 +34,7 @@ A value `0x00000000` and zero counter means the route has not thrown. `0xC000000
 
 ## Follow-up
 Correlate failing routes with the generated SDK definitions and, if possible, the supplied working reference DLL via Ghidra; repair only the failing resolution path. Preserve GPL-3.0 source attribution.
+
+## Subsequent UI request — deferred until Player Resolver is fixed
+
+When the practice menu is OPEN, constrain the mouse cursor to the actual **Chained Together client area** on the active monitor to avoid accidental movement onto a second display and loss of mouse-wheel jump input. On menu close, focus loss, alt-tab, window resize/move, game shutdown, or UI error, restore the original cursor clipping state immediately. Respect DPI and borderless/windowed modes; never force a permanent global lock or steal focus. Implement and test only **after** local PlayerController/Pawn detection and Fly have been verified. All existing feature defaults remain unchanged.
