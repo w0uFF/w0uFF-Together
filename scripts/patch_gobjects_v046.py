@@ -8,6 +8,7 @@ s = p.read_text(encoding="utf-8")
 for old, new in (
     ("GObjects          = 0x06E63470;", "GObjects          = 0x06E644F0;"),
     ("GWorld            = 0x06FD03C8;", "GWorld            = 0x06FD1448;"),
+    ("AppendString      = 0x00C80DE0;", "AppendString      = 0x00C80E00;"),
 ):
     assert s.count(old) == 1, "SDK offset drift: " + old
     s = s.replace(old, new)
@@ -50,4 +51,4 @@ s = s.replace(anchor, """
                             static_cast<unsigned long long>(g_reference_object_probe_faults.load(std::memory_order_relaxed)));
 """ + anchor)
 p.write_text(s, encoding="utf-8")
-print("v0.4.6: confirmed GObjects/GWorld SDK offsets, read-only object diagnostics")
+print("v0.4.6: confirmed GObjects/GWorld/FName AppendString offsets, read-only object diagnostics")
