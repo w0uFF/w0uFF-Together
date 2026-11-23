@@ -25,6 +25,10 @@ namespace wouff::duel
             if (!gate_ || !gate_->initialized()) return false; // fail closed
             if (!native_session_verified_) return false; // host changed / lobby no longer 2 players
             if (!hosting_ && ImGui::GetTime() - last_incoming_ > 12.0) return false;
+            // A host UI toggle must not grant mod cheats before the guest has
+            // acknowledged the current settings revision over authenticated P2P.
+            // In particular, changing Cheats Enabled invalidates the prior ACK.
+            if (hosting_ && !gate_->has_peer_ack()) return false;
             return gate_->rules().allow_mod_cheats();
         }
 
