@@ -1,0 +1,40 @@
+name: Inspect network and chain APIs for authoritative 1v1
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-duel-netapi.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract game SDK bundled with GPL source
+        shell: bash
+        run: |
+          unzip -q -o wouff-source-v042.zip
+      - name: Inspect chain, multiplayer, RPC and HUD APIs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          sdk=next(Path("w0uFF-Together/src").rglob("CppSDK/SDK"))
+          print("SDK",sdk)
+          selected=sorted(sdk.glob("*classes.hpp"))
+          for p in selected:
+              if not re.search("Chain|Character|GameMode|GameState|Lobby|CustomGI|Session|HUD|PlayerController|Multiplayer|Network|Menu",p.name,re.I):
+                  continue
+              lines=p.read_text(errors='replace').splitlines()
+              hits=[]
+              for idx,line in enumerate(lines):
+                  if re.search(r'(Chain|Unchain|Host|Session|PlayerState|PlayerController|Server_|Client_|Multicast|RPC|Lobby|GameMode|GameState|SetVisibility|Disconnect|Replicate|Win|Duel|HUD|Widget|DestroyComponent|Detach)',line,re.I):
+                      if re.search(r'\b(void|bool|int|class|TArray|struct|enum|FString|FName|static)\b',line) or line.lstrip().startswith('// Class'):
+                          hits.append((idx,line.strip()))
+              if hits:
+                  print('\nFILE',p.name,'LINES',len(lines),'HITS',len(hits))
+                  for idx,line in hits[:58]:print('%d: %s'%(idx+1,line[:190]))
+          PY
