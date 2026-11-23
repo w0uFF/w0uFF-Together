@@ -94,7 +94,7 @@ patch_one('const bool effective_fly = wouff::feature_registry::enabled(wouff::fe
           '                g_wouff_fly_mode_state.load(std::memory_order_acquire);',
           "FLY_GAME_THREAD_GATE")
 
-patch_one('    static bool s_snap_valid = false;',
+patch_one('static bool s_snap_valid = false;',
           '    static bool s_snap_valid = false;\n'
           '    static wouff::duel::lobby_controller s_duel_lobby;\n'
           '    static bool s_duel_was_staged = false;',
@@ -170,10 +170,6 @@ patch_one('if (wouff::feature_registry::enabled(wouff::feature_id::fly_mode) && 
 patch_one('if (wouff::feature_registry::enabled(wouff::feature_id::free_camera) && msg == WM_KEYUP && wparam == g_wouff_freecam_hotkey.get_vk_value())',
           'if (mod_cheats_allowed() && wouff::feature_registry::enabled(wouff::feature_id::free_camera) && msg == WM_KEYUP && wparam == g_wouff_freecam_hotkey.get_vk_value())',
           "FREECAM_HOTKEY_GATE")
-
-patch_one('    static bool mod_cheats_allowed() noexcept',
-          '    static bool mod_cheats_allowed() noexcept',
-          "CHECK_ALLOWED_PRESENT") if False else None
 
 # Avoid pretending a controller-only handshake removes actual chains.
 assert "RemoveCharacterConstraints" not in content
