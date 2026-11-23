@@ -1,0 +1,45 @@
+name: Inspect exact 1v1 chain authority methods
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-duel-chain-detail.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: unzip -q -o wouff-source-v042.zip
+      - name: Read-only blueprint chain and lobby authority inspection
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=next(Path("w0uFF-Together/src").rglob("CppSDK/SDK"))
+          targets=["BP_Chain_classes.hpp","BP_Character_classes.hpp","GS_Game_classes.hpp",
+              "CustomGI_classes.hpp","W_CreateSession_classes.hpp","W_Lobby_classes.hpp",
+              "BPI_Character_classes.hpp","BPI_ChainPhysics_classes.hpp",
+              "BP_Gamemode_classes.hpp","GM_Game_classes.hpp"]
+          for fn in targets:
+              p=root/fn
+              if not p.exists():
+                  print("MISSING",fn)
+                  continue
+              lines=p.read_text(errors="replace").splitlines()
+              print("\n###",fn,len(lines),"lines")
+              if fn in ("BP_Chain_classes.hpp","CustomGI_classes.hpp","W_CreateSession_classes.hpp","BPI_ChainPhysics_classes.hpp"):
+                  ranges=[(15,min(len(lines),145))]
+              elif fn=="BP_Character_classes.hpp":
+                  ranges=[(22,135),(135,205),(230,330)]
+              elif fn=="GS_Game_classes.hpp":
+                  ranges=[(20,120)]
+              else:
+                  ranges=[(15,min(len(lines),118))]
+              for start,end in ranges:
+                  for i in range(start-1,min(end,len(lines))):
+                      if fn=="BP_Character_classes.hpp" and i>134 and not any(t in lines[i].lower() for t in ("chain","rpc","server","multicast","attachment","constraint","game","_rep","controller","dissolv","detach")):continue
+                      print("%04d %s"%(i+1,lines[i][:230]))
+          PY
