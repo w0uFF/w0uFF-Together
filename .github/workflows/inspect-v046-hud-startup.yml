@@ -34,6 +34,10 @@ jobs:
           echo '=== MAIN_CPP_SOURCE ==='
           sed -n '1,330p' w0uFF-Together/src/main.cpp
           echo '=== HUD/HOTKEY/CONSOLE/NETWORK MATCHES ==='
-          rg -n -i 'ImGui::Begin\(|ImGui::SetNextWindowPos|SetWindowPos|NoMove|Coordinates HUD|coordinates_hud|Coordinate|ImGui::Text.*[XYZ]|UnchainedTogether|w0uFFTogether|LOGGER|LOG\(|G_LOGGER|LOG_INFO|rom::init|Network|Replication|multiplayer|Lobby|Steam' w0uFF-Together/src/gui/gui.cpp w0uFF-Together/src/main.cpp w0uFF-Together/src/CMakeLists.txt w0uFF-Together/NOTICE.md | head -n 230 || true
+          grep -nEi 'ImGui::Begin\(|ImGui::SetNextWindowPos|SetWindowPos|NoMove|Coordinates HUD|coordinates_hud|Coordinate|ImGui::Text.*[XYZ]|UnchainedTogether|w0uFFTogether|LOGGER|LOG\(|G_LOGGER|LOG_INFO|rom::init|Network|Replication|multiplayer|Lobby|Steam' w0uFF-Together/src/gui/gui.cpp w0uFF-Together/src/main.cpp w0uFF-Together/src/CMakeLists.txt w0uFF-Together/NOTICE.md | head -n 230 || true
+          echo '=== GUI HUD TOP, MAIN MENU AND HUD DRAW ==='
+          sed -n '1,260p' w0uFF-Together/src/gui/gui.cpp
+          sed -n '1110,1430p' w0uFF-Together/src/gui/gui.cpp
+          sed -n '1480,1720p' w0uFF-Together/src/gui/gui.cpp
           echo '=== FILES ==='
           find w0uFF-Together/src -maxdepth 3 -name '*.cpp' | grep -E 'gui|main|network|lua' | head -40
