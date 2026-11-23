@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/wouff-resolver-v047.yml'
+      - '.github/workflows/wouff-runtime-v047.yml'
       - 'scripts/resolve_reference_world_v045.py'
       - 'scripts/patch_gobjects_v046.py'
       - 'scripts/polish_hud_console_v047.py'
