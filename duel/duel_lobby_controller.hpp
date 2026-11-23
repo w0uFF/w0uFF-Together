@@ -23,13 +23,19 @@ namespace wouff::duel
         {
             if (!staged_) return true; // vanilla: no changes
             if (!gate_ || !gate_->initialized()) return false; // fail closed
+            if (!native_session_verified_) return false; // host changed / lobby no longer 2 players
             if (!hosting_ && ImGui::GetTime() - last_incoming_ > 12.0) return false;
             return gate_->rules().allow_mod_cheats();
         }
 
         // Only a read-only renderer-thread operation; doesn't access UE.
-        void tick()
+        void tick(bool game_instance_known, bool local_is_host, int player_count)
         {
+            // A stale or migrated lobby must never leave cheat permission
+            // enabled. Host identity and roster are obtained from game-thread
+            // POD; they are never inferred from a client-sent Steam message.
+            native_session_verified_ = staged_ && game_instance_known &&
+                player_count == 2 && local_is_host == hosting_;
             const double now = ImGui::GetTime();
             if (!net_.available() && now - last_probe_ >= 6.0)
             {
@@ -37,7 +43,7 @@ namespace wouff::duel
                 net_.attach(); // existing Steam runtime; never initializes Steam
             }
 
-            if (!staged_ || !gate_ || !net_.available()) return;
+            if (!staged_ || !gate_ || !net_.available() || !native_session_verified_) return;
             for (int i=0; i<8; ++i)
             {
                 const auto msg=net_.poll();
@@ -117,6 +123,8 @@ namespace wouff::duel
             else
             {
                 ImGui::SeparatorText("Host-controlled rules");
+                ImGui::Text("Native lobby ownership and 2-player count: %s",
+                    native_session_verified_ ? "CONFIRMED" : "LOST - cheats locked");
                 ImGui::Text("Role: %s",hosting_?"HOST":"GUEST");
                 ImGui::Text("Session code: %llu",static_cast<unsigned long long>(session_id_));
                 if (ImGui::Button("Copy session code"))
@@ -153,7 +161,7 @@ namespace wouff::duel
         {
             if (net_.available() && peer_id_) net_.close(peer_id_);
             gate_.reset();
-            staged_ = false; hosting_ = false;
+            staged_ = false; hosting_ = false; native_session_verified_ = false;
             session_id_ = 0; local_nonce_ = 0; remote_nonce_ = 0;
             peer_id_ = 0; last_incoming_ = 0; last_settings_revision_=0;
         }
@@ -233,6 +241,6 @@ namespace wouff::duel
         std::uint64_t session_id_=0,local_nonce_=0,remote_nonce_=0,peer_id_=0;
         std::uint32_t last_settings_revision_=0;
         double last_probe_=-100.0, last_outgoing_=-100.0,last_incoming_=0;
-        bool staged_=false,hosting_=false;
+        bool staged_=false,hosting_=false,native_session_verified_=false;
     };
 }
