@@ -1,0 +1,29 @@
+name: Fast Windows compile test for 1v1 ImGui lobby
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'duel/**'
+      - '.github/workflows/duel-ui-compile-ci.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  compile:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Unpack pinned ImGui headers
+        shell: pwsh
+        run: |
+          foreach ($part in @('wouff-source-v042.zip','wouff-vendor-1.zip','wouff-vendor-2.zip')) {
+            Expand-Archive -Path $part -DestinationPath '.' -Force
+          }
+          if (!(Test-Path w0uFF-Together/third_party/imgui/imgui.h)) { throw "Missing pinned ImGui" }
+      - name: Compile 1v1 overlay UI against pinned ImGui
+        shell: pwsh
+        run: |
+          cl /nologo /std:c++20 /W4 /EHsc /c /I w0uFF-Together/third_party/imgui /I duel duel/tests/lobby_ui_compile_test.cpp /Fo:duel-ui-probe.obj
+          if ($LASTEXITCODE -ne 0) { throw 'Duel UI header failed MSVC' }
+          Write-Host 'Duel UI header compiled; runtime two-client testing not yet performed.'
