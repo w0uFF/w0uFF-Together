@@ -77,9 +77,9 @@ static void snapshot_duel_game_instance(SDK::UWorld* world) noexcept
 static void snapshot_body()""",
           "ISOLATE_SEH_HELPER")
 
-patch_one('        g_snap.pawn_valid = false;\\n\\n        if (Level)',
-          '        g_snap.pawn_valid = false;\\n'
-          '        snapshot_duel_game_instance(World);\\n\\n'
+patch_one('        g_snap.pawn_valid = false;\n\n        if (Level)',
+          '        g_snap.pawn_valid = false;\n'
+          '        snapshot_duel_game_instance(World);\n\n'
           '        if (Level)',
           "GAME_THREAD_LOBBY_GI")
 
