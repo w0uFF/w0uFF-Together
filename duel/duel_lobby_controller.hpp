@@ -5,6 +5,7 @@
 // GPL-3.0, original author credited in NOTICE.md.
 
 #include "steam_p2p_transport.hpp"
+#include "solo_race_panel.hpp"
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <cstdint>
@@ -91,6 +92,8 @@ namespace wouff::duel
 
         void draw(bool game_instance_known, bool local_is_host, int player_count)
         {
+            solo_.draw();
+            ImGui::Separator();
             ImGui::TextColored(ImVec4(.78f,.55f,1.f,1.f), "1v1 RACE / PRIVATE LOBBY - NETWORK ALPHA");
             ImGui::TextWrapped("Host and guest rule sync only. The actual race and chain-detach controls are not enabled until their authoritative game-server implementation has been validated.");
             ImGui::Separator();
@@ -238,6 +241,7 @@ namespace wouff::duel
             net_.send(peer_id_,ack);
         }
 
+        solo_race_panel solo_{};
         steam_p2p_transport net_{};
         std::unique_ptr<peer_gate> gate_{};
         std::string peer_text_{};
