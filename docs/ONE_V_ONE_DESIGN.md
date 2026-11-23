@@ -46,3 +46,23 @@ The game's **September 2026 2v2 Race mode** may be a useful native scoring/team 
 6. Preserve GPL-3.0 and original UnchainedTogether author xiaoxiao921 (Quentin) credit.
 
 **Do not say "1v1 implemented" until at least the first four runtime gates pass.**
+
+
+## Expanded race product direction (2026-11-23)
+The original exactly-two-player duel is now one configuration of a broader Race mode.
+
+- **Solo time trial** must be launchable without another participant and visible in game. The first alpha is a local configurable timer in the existing ImGui lobby tab, not yet a native UMG button.
+- **Finish-first**: first participant confirmed at the map finish wins. Solo records elapsed completion time only when a real finish signal is wired; until then a manual stop is an *unranked timer*, not a completed map.
+- **Height-at-deadline**: configurable duration (including arbitrary minutes and multi-day races), host/server determines each participant's highest verified vertical progress and winner at deadline. Timers must remain correct across frame drops and overlay closure, and duration must be bounded to avoid overflow.
+- **HUD**: remaining time, local height in metres, map-completion percentage only after proving exact level origin and summit height, and per-participant progress bars. Drag/edit when INSERT is open; pass mouse/game input through when closed.
+- **Multiplayer expansion**: allow solo and N-player races up to an *experimentally verified* game/session cap. Never assume the earlier hard-coded 16-player SDK sanity bound is a supported capacity.
+- **Records**: local durable per-run history (mode, version, map, verified height/finish, duration, cheats, participants, timestamps), best attempts and local leaderboards. Current alpha stores only unranked timer entries in memory; restarting the game loses them.
+- **Global leaderboard**: a future opt-in backend must validate run provenance and resist replay/forged submissions. Do not ship GitHub write credentials or a repository-scoped personal access token in the DLL. GitHub Actions by itself does not authenticate arbitrary game clients or prove runs are legitimate. Explicit consent/privacy and a service-side ingestion endpoint are prerequisites.
+- **Native integration**: first probe a safe UMG entry point near the game's existing Play/session buttons. Continue using the tested ImGui panel until a native widget hook is proven stable. Solo mode should not modify physical chain actors.
+- **Cheat policy**: differentiate explicitly enabled unranked practice from ranked competitive sessions; avoid presenting local records as authenticated competitive results.
+
+### Shipped incremental alpha
+`duel/solo_race_panel.hpp` is a renderer-thread local timer, accessed through `duel/duel_lobby_controller.hpp` and packaged by `scripts/integrate_duel_lobby_v048.py`. It supports manually stopped finish timers or 1-second-to-30-day countdowns, with a non-persistent in-memory history (20 entries max). It does **not** detect map finish, record height, show an always-on HUD, persist results, provide native buttons or support a playable competitive multiplayer race. All gameplay-chain manipulation remains disabled.
+
+### CI caveat
+After commit `227b74306cc9cb46c5db6144b7cf360c68da7365`, GitHub Actions began failing immediately without job step logs. Treat this as an **unresolved build/CI blocker**, not proof of compiler failure or success. The original v0.4.8 tested by the user remains the last verified playable baseline.
