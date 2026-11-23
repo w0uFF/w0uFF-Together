@@ -1,0 +1,26 @@
+name: 1v1 Steam transport Windows compile check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'duel/**'
+      - '.github/workflows/duel-steam-transport-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Microsoft C++ toolchain
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Compile and exercise absent-Steam fallback
+        shell: pwsh
+        run: |
+          cl /nologo /std:c++20 /W4 /WX /EHsc /I duel duel\tests\steam_transport_test.cpp /Fe:duel-transport-test.exe
+          if ($LASTEXITCODE -ne 0) { throw "Steam P2P adapter failed MSVC" }
+          & .\duel-transport-test.exe
+          if ($LASTEXITCODE -ne 0) { throw "Steam P2P fallback failed" }
+          Write-Host "Windows Steam transport API boundary compiles and fails closed when unattached."
