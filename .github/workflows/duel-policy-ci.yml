@@ -18,4 +18,6 @@ jobs:
           set -euo pipefail
           c++ -std=c++20 -Wall -Wextra -Werror -pedantic -I duel duel/tests/policy_test.cpp -o /tmp/duel-policy-test
           /tmp/duel-policy-test
+          c++ -std=c++20 -Wall -Wextra -Werror -pedantic -I duel duel/tests/wire_test.cpp -o /tmp/duel-wire-test
+          /tmp/duel-wire-test
           echo "Host policy: vanilla preserved, guests denied, default cheats OFF, host-only updates, no start without chain and both peers"
