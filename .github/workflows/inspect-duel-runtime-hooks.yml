@@ -36,7 +36,7 @@ jobs:
           for name in needles:
               indices=[i for i,ln in enumerate(l) if name in ln]
               print('\nANCHOR',name,'lines',[i+1 for i in indices[:18]])
-          for start,end in [(565,940),(990,1180),(1580,1715)]:
+          for start,end in [(45,110),(565,940),(990,1320),(1580,1715)]:
               print('\nSECTION',start,end)
               for i in range(start-1,min(len(l),end)):
                   print('%04d %s'%(i+1,l[i]))
