@@ -45,35 +45,42 @@ patch_one('    static std::atomic_uint64_t g_resolver_faults{0};',
           '    }',
           "ATOMIC_CHEAT_RULES")
 
-patch_one('        g_snap.pawn_valid = false;\n\n        if (Level)',
-          """        g_snap.pawn_valid = false;
-
-        // Read lobby metadata on the UE game thread only. The renderer uses
-        // the synchronized POD snapshot; NEVER pass a UGameInstance* to UI.
-        g_snap.duel_game_instance_valid = false;
-        g_snap.duel_hosting_online_session = false;
-        g_snap.duel_players_in_session = 0;
-        __try
+patch_one('static void snapshot_body()',
+          """// Isolate SEH into a POD-only helper; snapshot_body itself constructs
+// C++ objects and MSVC refuses __try in functions requiring unwinding.
+static void snapshot_duel_game_instance(SDK::UWorld* world) noexcept
+{
+    g_snap.duel_game_instance_valid = false;
+    g_snap.duel_hosting_online_session = false;
+    g_snap.duel_players_in_session = 0;
+    __try
+    {
+        auto* gi = world ? world->OwningGameInstance : nullptr;
+        if (gi && gi->IsA(SDK::UCustomGI_C::StaticClass()))
         {
-            auto* gi = World ? World->OwningGameInstance : nullptr;
-            if (gi && gi->IsA(SDK::UCustomGI_C::StaticClass()))
+            auto* game_gi = reinterpret_cast<SDK::UCustomGI_C*>(gi);
+            const int players = game_gi->PlayersInSession;
+            if (players >= 0 && players <= 16)
             {
-                auto* game_gi = reinterpret_cast<SDK::UCustomGI_C*>(gi);
-                const int players = game_gi->PlayersInSession;
-                if (players >= 0 && players <= 16)
-                {
-                    g_snap.duel_game_instance_valid = true;
-                    g_snap.duel_hosting_online_session = game_gi->HostingOnlineSession;
-                    g_snap.duel_players_in_session = players;
-                }
+                g_snap.duel_game_instance_valid = true;
+                g_snap.duel_hosting_online_session = game_gi->HostingOnlineSession;
+                g_snap.duel_players_in_session = players;
             }
         }
-        __except(EXCEPTION_EXECUTE_HANDLER)
-        {
-            g_duel_gi_read_faults.fetch_add(1, std::memory_order_relaxed);
-        }
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER)
+    {
+        g_duel_gi_read_faults.fetch_add(1, std::memory_order_relaxed);
+    }
+}
 
-        if (Level)""",
+static void snapshot_body()""",
+          "ISOLATE_SEH_HELPER")
+
+patch_one('        g_snap.pawn_valid = false;\\n\\n        if (Level)',
+          '        g_snap.pawn_valid = false;\\n'
+          '        snapshot_duel_game_instance(World);\\n\\n'
+          '        if (Level)',
           "GAME_THREAD_LOBBY_GI")
 
 patch_one('if (const auto pending = g_teleports.consume();\n                pending && g_pawn && wouff::feature_registry::enabled(wouff::feature_id::teleport))',
