@@ -127,7 +127,7 @@ patch_one('static bool s_snap_valid = false;',
 patch_one('        // Named cut presets: reliable only after the player captures coordinates.',
           """        // Host/guest networking runs on renderer only; Unreal session info
         // comes from the game-thread POD snapshot.
-        s_duel_lobby.tick();
+        s_duel_lobby.tick(s_snap.duel_game_instance_valid,\n            s_snap.duel_hosting_online_session, s_snap.duel_players_in_session);
         const bool staged_now = s_duel_lobby.staged();
         if (staged_now && !s_duel_was_staged)
         {
