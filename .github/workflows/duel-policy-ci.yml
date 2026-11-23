@@ -20,4 +20,6 @@ jobs:
           /tmp/duel-policy-test
           c++ -std=c++20 -Wall -Wextra -Werror -pedantic -I duel duel/tests/wire_test.cpp -o /tmp/duel-wire-test
           /tmp/duel-wire-test
+          c++ -std=c++20 -Wall -Wextra -Werror -pedantic -I duel duel/tests/chain_coordinator_test.cpp -o /tmp/duel-chain-coordinator-test
+          /tmp/duel-chain-coordinator-test
           echo "Host policy: vanilla preserved, guests denied, default cheats OFF, host-only updates, no start without chain and both peers"
