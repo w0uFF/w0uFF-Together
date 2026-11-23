@@ -47,7 +47,10 @@ namespace wouff::duel
                 if (!hosting_ && msg->data.type==message_type::hello)
                     remote_nonce_=msg->data.lobby_nonce;
                 if (!hosting_ && msg->data.type==message_type::settings)
+                {
+                    last_settings_revision_=msg->data.revision;
                     send_ack();
+                }
             }
 
             if (now - last_outgoing_ < 1.0) return;
@@ -152,7 +155,7 @@ namespace wouff::duel
             gate_.reset();
             staged_ = false; hosting_ = false;
             session_id_ = 0; local_nonce_ = 0; remote_nonce_ = 0;
-            peer_id_ = 0; last_incoming_ = 0;
+            peer_id_ = 0; last_incoming_ = 0; last_settings_revision_=0;
         }
 
     private:
