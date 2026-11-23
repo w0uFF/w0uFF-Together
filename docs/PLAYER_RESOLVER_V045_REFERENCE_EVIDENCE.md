@@ -33,3 +33,25 @@ Build source reconstruction uses v0.4.2 source, checked v0.4.3 patch, v0.4.3 MSV
 4. Only after solo succeeds, validate co-op in a private lobby and verify that Fly affects the **local player**, not the partner.
 
 Do not claim resolved or ship stable until these tests pass.
+
+## v0.4.5 in-game failure and v0.4.6 follow-up (2026-11-23)
+
+**User's screenshot from v0.4.5, confirmed failed:** 9,481 Unreal ticks; 0 snapshot failures; **47,405 resolver exceptions**. Five routes each faulted exactly 9,481 times with SEH `0xC0000005`: C1 LocalPlayers, C2 GameplayStatics, C3 LocalActor, P3 GetPlayerPawn and P4 GetPlayerCharacter. World and PersistentLevel FOUND; `World source: Working DLL GWorld+0x6FD1448`; GWorld read exceptions 0; controller and pawn NOT FOUND, paths 0. No successful Fly gameplay verification.
+
+An independent disassembly of the exact user-provided working DLL identified **additional, versioned SDK offsets**:
+
+| Generated SDK constant | Old bundled SDK | Working DLL instructions | Corrected RVA |
+|---|---|---|---|
+| `GObjects` | `0x06E63470` | `0x18005DD08: lea r8,[rax+0x6E644F0]` | **`0x06E644F0`** |
+| `AppendString` | `0x00C80DE0` | `0x18005D6DC: add rax,0xC80E00`, followed by use as FName string append function at `0x18005D746` | **`0x00C80E00`** |
+| `GWorld` | `0x06FD03C8` | `0x180061E99: mov r13,[rax+0x6FD1448]` | **`0x06FD1448`** |
+
+The SDK uses the GUObjectArray at `GObjects` for `StaticClass()` lookups and `FName::AppendString` for class-name comparison; stale addresses can cause the repeated access violations, **but runtime correction remains a hypothesis until user testing**.
+
+**v0.4.6 isolated patch** `scripts/patch_gobjects_v046.py` applies all three offsets to the pinned generated `Basic.hpp` after the existing v0.4.5 player resolver patch, and adds a read-only `GObjects` object-count probe to runtime diagnostics. The `ProcessEventIdx=0x4D` value is deliberately **unchanged**: the reference vtable call at `0x1800ED132` uses byte offset `0x268`, which equals index 77. No change to feature defaults or remote-pawn filtering.
+
+Workflow `.github/workflows/wouff-resolver-v046.yml` compiles the source on Windows; use the run built from commit `f23a406521ad712058abfcf3a09d4d1499882dbb` or later, **not** the earlier partial v0.4.6 commit which lacked the AppendString correction.
+
+Local `cmake -DWOUFF_TESTS_ONLY=ON` plus CTest: 3/3 portable tests passed. Windows compilation and gameplay verification are separate gates.
+
+**Required solo test:** `World source`, `Reference GObjects +0x6E644F0 count` (expected positive), C1/C2/C3 and P1–P5 exception counts, Controller and Pawn FOUND; only after both FOUND, manually enable Fly and test F7. Then private co-op local-only regression. No success claimed yet.
