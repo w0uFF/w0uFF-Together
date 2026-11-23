@@ -1,0 +1,35 @@
+name: Check native duel enum, host and replication entry points
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/check-native-duel-entries.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - run: unzip -q -o wouff-source-v042.zip
+      - name: Review game SDK native multiplayer interfaces
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=next(Path('w0uFF-Together/src').rglob('CppSDK/SDK'))
+          specs=[('E_Gamemodes_structs.hpp',1,160),('GS_Game_classes.hpp',105,240),('BP_Character_classes.hpp',70,230),
+              ('PC_Game_classes.hpp',1,140),('BP_PlayerController_classes.hpp',1,150),
+              ('W_Lobby_classes.hpp',18,77),('Versus_W_classes.hpp',15,160),
+              ('CustomGI_classes.hpp',25,125),('W_CreateSession_classes.hpp',45,110),
+              ('Engine_classes.hpp',1,50)]
+          for name,a,b in specs:
+             f=p/name
+             print('===',name,'===')
+             if not f.exists(): print('MISSING');continue
+             lines=f.read_text(errors='replace').splitlines()
+             for i in range(a-1,min(b,len(lines))):
+                 l=lines[i]
+                 if name=='BP_Character_classes.hpp' and not any(x in l.lower() for x in ('chain','rpc','server','multicast','team','game','detach','onrep','constraint','sumo','race','static','fly','net','mode')):continue
+                 print(f'{i+1}: {l[:260]}')
+          PY
