@@ -7,6 +7,8 @@ The user confirmed Chained Together **1.11.2** with our v0.4.6 runtime: Controll
 - Exactly **two online players** in a private 1v1 race, independently climbing instead of being tethered as a coop duo.
 - Host configures a custom **1v1 lobby panel**, including a **Cheats Enabled** checkbox, **OFF by default**.
 - If Cheats Enabled is OFF, this mod refuses Fly, Teleport, Freecam and any other cheat-providing feature for both participants **during the 1v1**, even if those modules were enabled in the practice configuration.
+- When entering the 1v1, forcibly apply `SetFlyMode(false)` on the game thread and clear pending teleport actions if host cheats are disabled; blocking only new hotkeys is insufficient if Fly was already active before the match.
+- During an active 1v1, gate **every invocation path** (menu toggles, F7, checkpoint/teleport hotkeys, mailbox processing, scripted actions) against the synchronized host policy; do not rely on disabled UI controls alone.
 - Host's configuration must propagate to the guest. User's own unauthorized checkbox or local file must not grant permission.
 - Reversibly detach the **actual physical chain constraints** on the authoritative host, not merely hide the chain mesh. Restore original state / return to normal on match exit.
 - Both players must have compatible versions of the mod. Solo practice and ordinary co-op must remain unchanged unless the host explicitly creates a 1v1 lobby.
