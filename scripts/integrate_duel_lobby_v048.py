@@ -82,6 +82,23 @@ patch_one('if (const auto pending = g_teleports.consume();\n                pend
           '                wouff::feature_registry::enabled(wouff::feature_id::teleport))',
           "TELEPORT_CONSUMER_GATE")
 
+
+patch_one('// ---- 写请求：自由视角 ----\\n\\t\\t\\tif (g_freecam_request.exchange(false))',
+          '// ---- 写请求：自由视角 ----\\n'
+          '\\t\\t\\tstatic bool s_duel_freecam_on = false;\\n'
+          '\\t\\t\\tif (!mod_cheats_allowed() && s_duel_freecam_on &&\\n'
+          '\\t\\t\\t    g_player_controller && g_player_controller->CheatManager)\\n'
+          '\\t\\t\\t{\\n'
+          '\\t\\t\\t    g_player_controller->CheatManager->ToggleDebugCamera();\\n'
+          '\\t\\t\\t    s_duel_freecam_on = false;\\n'
+          '\\t\\t\\t}\\n'
+          '\\t\\t\\tif (g_freecam_request.exchange(false))',
+          "DISABLE_PREEXISTING_FREECAM")
+patch_one('g_player_controller->CheatManager->ToggleDebugCamera();\\n\\t\\t\\t\\t}',
+          'g_player_controller->CheatManager->ToggleDebugCamera();\\n'
+          '\\t\\t\\t\\t    s_duel_freecam_on = !s_duel_freecam_on;\\n'
+          '\\t\\t\\t\\t}',
+          "TRACK_MOD_FREECAM")
 patch_one('if (g_player_controller && wouff::feature_registry::enabled(wouff::feature_id::free_camera))',
           'if (g_player_controller && mod_cheats_allowed() &&\n'
           '                    wouff::feature_registry::enabled(wouff::feature_id::free_camera))',
