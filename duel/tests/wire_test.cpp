@@ -82,6 +82,11 @@ int main()
     assert(!host_rule.accept(ack,host));
     assert(host_rule.accept(ack,guest));
     assert(host_rule.has_peer_ack());
+    assert(host_rule.host_set_cheats(true));
+    assert(!host_rule.has_peer_ack()); // prior ACK may not approve changed rules
+    assert(!host_rule.accept(packet{message_type::settings_ack,0,lobby,nonce,host,guest,0,2},guest));
+    assert(host_rule.accept(packet{message_type::settings_ack,0,lobby,nonce,host,guest,1,2},guest));
+    assert(host_rule.has_peer_ack());
     host_rule.disconnect();
     assert(!host_rule.initialized());
 
