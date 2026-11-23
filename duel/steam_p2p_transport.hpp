@@ -46,7 +46,18 @@ namespace wouff::duel
                 return ::GetProcAddress(module,symbol);
             };
             const auto get_network = reinterpret_cast<get_network_fn>(ptr("SteamAPI_SteamNetworking_v006"));
-            const auto get_user = reinterpret_cast<get_user_fn>(ptr("SteamAPI_SteamUser_v021"));
+            get_user_fn get_user = nullptr;
+            // The title's Steam runtime may expose a different SteamUser
+            // interface revision. Only acquire a version that actually exists.
+            for (const char* name : {"SteamAPI_SteamUser_v023",
+                                     "SteamAPI_SteamUser_v022",
+                                     "SteamAPI_SteamUser_v021",
+                                     "SteamAPI_SteamUser_v020",
+                                     "SteamAPI_SteamUser_v019"})
+            {
+                if ((get_user = reinterpret_cast<get_user_fn>(ptr(name))))
+                    break;
+            }
             send_packet_ = reinterpret_cast<send_fn>(ptr("SteamAPI_ISteamNetworking_SendP2PPacket"));
             can_read_ = reinterpret_cast<can_read_fn>(ptr("SteamAPI_ISteamNetworking_IsP2PPacketAvailable"));
             read_packet_ = reinterpret_cast<read_fn>(ptr("SteamAPI_ISteamNetworking_ReadP2PPacket"));
