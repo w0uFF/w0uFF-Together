@@ -1,0 +1,39 @@
+name: Inspect v0.4.6 startup HUD and multiplayer integration
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect-v046-hud-startup.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct current code
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q -o wouff-source-v042.zip
+          python3 - <<'PY'
+          import base64,gzip,pathlib
+          p=pathlib.Path('patches/runtime-v043.patch.gz.b64')
+          pathlib.Path('runtime-v043.patch').write_bytes(gzip.decompress(base64.b64decode(p.read_bytes())))
+          PY
+          git apply runtime-v043.patch
+          git apply patches/v043-msvc-build-fix.patch
+          python3 scripts/instrument_player_resolver_v044.py
+          python3 scripts/resolve_reference_world_v045.py
+          python3 scripts/patch_gobjects_v046.py
+      - name: Inspect main startup and important module metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== MAIN_CPP_SOURCE ==='
+          sed -n '1,330p' w0uFF-Together/src/main.cpp
+          echo '=== HUD/HOTKEY/CONSOLE/NETWORK MATCHES ==='
+          rg -n -i 'ImGui::Begin\(|ImGui::SetNextWindowPos|SetWindowPos|NoMove|Coordinates HUD|coordinates_hud|Coordinate|ImGui::Text.*[XYZ]|UnchainedTogether|w0uFFTogether|LOGGER|LOG\(|G_LOGGER|LOG_INFO|rom::init|Network|Replication|multiplayer|Lobby|Steam' w0uFF-Together/src/gui/gui.cpp w0uFF-Together/src/main.cpp w0uFF-Together/src/CMakeLists.txt w0uFF-Together/NOTICE.md | head -n 230 || true
+          echo '=== FILES ==='
+          find w0uFF-Together/src -maxdepth 3 -name '*.cpp' | grep -E 'gui|main|network|lua' | head -40
