@@ -137,8 +137,14 @@ namespace wouff::duel
 
         bool initialized() const noexcept { return ready_; }
         bool accepted_hello() const noexcept { return nonce_!=0; }
-        bool has_peer_ack() const noexcept { return ack_received_; }
+        bool has_peer_ack() const noexcept { return ack_received_ && ack_revision_ == rules_.settings_for_host_broadcast().revision; }
         policy const& rules() const noexcept { return rules_; }
+
+        bool host_set_cheats(bool enabled) noexcept
+        {
+            if (!ready_ || !local_is_host_) return false;
+            return rules_.host_set_cheats(enabled);
+        }
 
         // The host generates a unique, unpredictable nonzero nonce using a
         // real secure random source. Never use a constant shared nonce.
