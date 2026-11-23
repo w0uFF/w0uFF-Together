@@ -74,7 +74,10 @@ namespace wouff::duel
                 settings.version != protocol_version ||
                 settings.session_id == 0 ||
                 settings.session_id != settings_.session_id ||
-                (host_confirmed_ && settings.revision < settings_.revision))
+                (host_confirmed_ &&
+                 (settings.revision < settings_.revision ||
+                  (settings.revision == settings_.revision &&
+                   settings.cheats_enabled != settings_.cheats_enabled))))
                 return false;
             settings_ = settings;
             host_confirmed_ = true;
