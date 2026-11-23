@@ -1,0 +1,43 @@
+name: Inspect duel integration attachment points
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-duel-runtime-hooks.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct existing working runtime and inspect hotspots
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q -o wouff-source-v042.zip
+          python3 - <<'PY'
+          import base64,gzip,pathlib
+          p=pathlib.Path('patches/runtime-v043.patch.gz.b64')
+          pathlib.Path('runtime-v043.patch').write_bytes(gzip.decompress(base64.b64decode(p.read_bytes())))
+          PY
+          git apply runtime-v043.patch
+          git apply patches/v043-msvc-build-fix.patch
+          python3 scripts/instrument_player_resolver_v044.py
+          python3 scripts/resolve_reference_world_v045.py
+          python3 scripts/patch_gobjects_v046.py
+          python3 scripts/polish_hud_console_v047.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('w0uFF-Together/src/gui/gui.cpp')
+          l=p.read_text().splitlines()
+          needles=['game_snapshot_t','g_customgi', 'static void snapshot_body()', 'void gui::dx_on_tick()', 'if (m_is_open)', 'void gui::wndproc(', 'g_teleports.', 'g_wouff_fly_mode_state', 'SetFlyMode','HostingOnlineSession']
+          for name in needles:
+              indices=[i for i,ln in enumerate(l) if name in ln]
+              print('\nANCHOR',name,'lines',[i+1 for i in indices[:18]])
+          for start,end in [(565,940),(990,1180),(1580,1715)]:
+              print('\nSECTION',start,end)
+              for i in range(start-1,min(len(l),end)):
+                  print('%04d %s'%(i+1,l[i]))
+          PY
