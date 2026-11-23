@@ -1,0 +1,21 @@
+name: Validate 1v1 host policy (no gameplay integration yet)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'duel/**'
+      - '.github/workflows/duel-policy-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run standalone host-rule tests
+        run: |
+          set -euo pipefail
+          c++ -std=c++20 -Wall -Wextra -Werror -pedantic -I duel duel/tests/policy_test.cpp -o /tmp/duel-policy-test
+          /tmp/duel-policy-test
+          echo "Host policy: vanilla preserved, guests denied, default cheats OFF, host-only updates, no start without chain and both peers"
