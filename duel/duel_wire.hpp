@@ -137,7 +137,7 @@ namespace wouff::duel
 
         bool initialized() const noexcept { return ready_; }
         bool accepted_hello() const noexcept { return nonce_!=0; }
-        bool has_peer_ack() const noexcept { return ack_revision_!=0; }
+        bool has_peer_ack() const noexcept { return ack_received_; }
         policy const& rules() const noexcept { return rules_; }
 
         // The host generates a unique, unpredictable nonzero nonce using a
@@ -175,6 +175,7 @@ namespace wouff::duel
                     p.flags || p.revision != rules_.settings_for_host_broadcast().revision)
                     return false;
                 ack_revision_ = p.revision;
+                ack_received_ = true;
                 last_sequence_ = p.sequence;
                 return true;
             }
@@ -217,6 +218,7 @@ namespace wouff::duel
             // The host must independently restore authoritative chain state.
             ready_=false;
             nonce_=0;
+            ack_received_=false;
             rules_.reset();
         }
 
@@ -229,6 +231,7 @@ namespace wouff::duel
         std::uint32_t last_sequence_=0;
         std::uint32_t latest_settings_revision_=0;
         std::uint32_t ack_revision_=0;
+        bool ack_received_=false;
         bool local_is_host_=false;
         bool ready_=false;
     };
