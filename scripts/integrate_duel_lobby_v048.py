@@ -30,7 +30,9 @@ patch_one('        bool level_valid             = false;',
           '        bool level_valid             = false;\n'
           '        bool duel_game_instance_valid = false;\n'
           '        bool duel_hosting_online_session = false;\n'
-          '        int duel_players_in_session = 0;',
+          '        int duel_players_in_session = 0;\n'
+          '        int duel_gamestate_players = 0;\n'
+          '        int duel_gi_players_in_session = 0;',
           "POD_HOST_SNAPSHOT")
 
 patch_one('    static std::atomic_uint64_t g_resolver_faults{0};',
@@ -53,6 +55,8 @@ static void snapshot_duel_game_instance(SDK::UWorld* world) noexcept
     g_snap.duel_game_instance_valid = false;
     g_snap.duel_hosting_online_session = false;
     g_snap.duel_players_in_session = 0;
+    g_snap.duel_gamestate_players = 0;
+    g_snap.duel_gi_players_in_session = 0;
     __try
     {
         auto* gi = world ? world->OwningGameInstance : nullptr;
@@ -65,6 +69,22 @@ static void snapshot_duel_game_instance(SDK::UWorld* world) noexcept
                 g_snap.duel_game_instance_valid = true;
                 g_snap.duel_hosting_online_session = game_gi->HostingOnlineSession;
                 g_snap.duel_players_in_session = players;
+                g_snap.duel_gi_players_in_session = players;
+            }
+        }
+        auto* game_state = world ? world->GameState : nullptr;
+        if (game_state && game_state->IsA(SDK::AGameStateBase::StaticClass()))
+        {
+            const int replicated_players = game_state->PlayerArray.Num();
+            if (replicated_players >= 0 && replicated_players <= 16)
+            {
+                g_snap.duel_gamestate_players = replicated_players;
+                // GameInstance can lag behind the replicated lobby roster.
+                // This is only for alpha staging; authoritative gameplay
+                // still requires verified Steam members and server state.
+                if (replicated_players == 2 &&
+                    g_snap.duel_players_in_session == 1)
+                    g_snap.duel_players_in_session = 2;
             }
         }
     }
@@ -167,6 +187,8 @@ patch_one('                        ImGui::Text("GWorld read exceptions: %llu",',
           '                            s_snap.duel_game_instance_valid ? "YES" : "NO",\n'
           '                            s_snap.duel_hosting_online_session ? "YES" : "NO",\n'
           '                            s_snap.duel_players_in_session);\n'
+          '                        ImGui::Text("1v1 raw GI count: %d, GameState PlayerStates: %d",\n'
+          '                            s_snap.duel_gi_players_in_session, s_snap.duel_gamestate_players);\n'
           '                        ImGui::Text("1v1 lobby GI read exceptions: %llu",\n'
           '                            static_cast<unsigned long long>(g_duel_gi_read_faults.load(std::memory_order_relaxed)));\n'
           '                        ImGui::Text("GWorld read exceptions: %llu",',
