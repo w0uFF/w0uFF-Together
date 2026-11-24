@@ -1,0 +1,35 @@
+name: Inspect native race lobby player count
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-race-player-count.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect SDK counts without changing gameplay
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q -o wouff-source-v042.zip
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          sdk=next(Path("w0uFF-Together/src").rglob("CppSDK/SDK"))
+          names=("CustomGI_classes.hpp","GS_Game_classes.hpp","W_Lobby_classes.hpp","W_CreateSession_classes.hpp","Engine_classes.hpp","SteamCore_classes.hpp")
+          patterns=re.compile(r"PlayersInSession|PlayerArray|PlayerCount|PlayerNum|NumPlayers|LobbyMembers|GetNumLobby|GetPlayerCount|GetNumPlayers|OnMember|OnPlayer|GameState|PlayerState|OwningGameInstance|PlayerControllers|HostingOnlineSession",re.I)
+          for name in names:
+              p=sdk/name
+              if not p.exists():
+                  print("NOT_FOUND",name)
+                  continue
+              lines=p.read_text(errors="replace").splitlines()
+              print("===",name,len(lines),"lines===")
+              for i,line in enumerate(lines):
+                  if patterns.search(line):
+                      print(f"{i+1}: {line[:260]}")
+          PY
