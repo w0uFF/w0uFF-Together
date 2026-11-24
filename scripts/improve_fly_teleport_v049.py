@@ -82,5 +82,22 @@ patch('''		if (mod_cheats_allowed() && wouff::feature_registry::enabled(wouff::f
             return;
         }
 		if (mod_cheats_allowed() && wouff::feature_registry::enabled(wouff::feature_id::fly_mode) && msg == WM_KEYUP && wparam == g_wouff_fly_mode.get_vk_value())''',"FLY_WHEEL")
+# Keep fixed known cuts untouched; custom checkpoints persist separately.
+patch('#include "features/duel_lobby_controller.hpp"',
+      '#include "features/duel_lobby_controller.hpp"\\n#include "features/custom_cut_panel.hpp"',
+      "CUSTOM_CUT_HEADER")
+patch('''                            if (ImGui::CollapsingHeader("w0uFF Practice — Known Cuts", ImGuiTreeNodeFlags_DefaultOpen))''',
+'''                            static wouff::practice::custom_cut_panel s_custom_cuts;
+                            static auto s_custom_cut_path =
+                                g_file_manager.get_project_file("./practice_custom_cuts.json").get_path();
+                            s_custom_cuts.draw(s_custom_cut_path, current_pos.X, current_pos.Y, current_pos.Z,
+                                s_snap_valid && s_snap.pawn_valid,
+                                [](double x, double y, double z)
+                                {
+                                    if (mod_cheats_allowed())
+                                        request_teleport(SDK::FVector{x,y,z});
+                                });
+                            if (ImGui::CollapsingHeader("w0uFF Practice — Known Cuts", ImGuiTreeNodeFlags_DefaultOpen))''',
+"CUSTOM_CUT_UI")
 p.write_text(s,encoding="utf-8")
 print("Fly: adjustable speed, wheel, Space/Ctrl world Z; teleport clears local velocity")
