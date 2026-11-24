@@ -23,11 +23,34 @@ class solo_race_panel
     };
 public:
     bool running() const noexcept { return running_; }
-    void draw()
+    // Called every renderer frame, even when INSERT / the race tab is closed.
+    void tick()
     {
         const auto seconds=elapsed();
         if (running_ && timed_ && seconds >= duration_seconds_)
             stop(true);
+        if (!running_) return;
+        char buffer[80];
+        format_time(buffer,sizeof(buffer),timed_ ?
+            (duration_seconds_ > seconds ? duration_seconds_ - seconds : 0) : seconds);
+        const ImGuiIO& io=ImGui::GetIO();
+        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 18.f, 18.f), ImGuiCond_Always, ImVec2(1.f,0.f));
+        ImGui::SetNextWindowBgAlpha(0.76f);
+        constexpr ImGuiWindowFlags flags=ImGuiWindowFlags_NoDecoration |
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav;
+        if (ImGui::Begin("Solo Race timer HUD##wouff",nullptr,flags))
+        {
+            ImGui::TextUnformatted(timed_ ? "SOLO RACE / REMAINING" : "SOLO RACE / ELAPSED");
+            ImGui::Text("%s",buffer);
+            ImGui::TextDisabled("Unranked practice timer");
+        }
+        ImGui::End();
+    }
+    void draw()
+    {
+        const auto seconds=elapsed();
         ImGui::SeparatorText("Solo Race / Time Trial - alpha");
         ImGui::TextWrapped("Solo timer runs without an opponent. This is a local practice tool, NOT a verified race, height leaderboard or game-finish detector.");
         if (!running_)
