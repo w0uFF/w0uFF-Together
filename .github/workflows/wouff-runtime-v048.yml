@@ -8,6 +8,7 @@ on:
       - 'scripts/patch_gobjects_v046.py'
       - 'scripts/polish_hud_console_v047.py'
       - 'scripts/integrate_duel_lobby_v048.py'
+      - 'scripts/improve_fly_teleport_v049.py'
       - 'duel/**'
       - 'scripts/instrument_player_resolver_v044.py'
       - 'patches/runtime-v043.patch.gz.b64'
@@ -43,6 +44,7 @@ jobs:
           python3 scripts/patch_gobjects_v046.py
           python3 scripts/polish_hud_console_v047.py
           python3 scripts/integrate_duel_lobby_v048.py
+          python3 scripts/improve_fly_teleport_v049.py
           test -f w0uFF-Together/NOTICE.md
       - name: Configure and build portable tests
         run: |
@@ -105,6 +107,7 @@ jobs:
           python scripts/polish_hud_console_v047.py
           if ($LASTEXITCODE -ne 0) { throw 'Console/HUD patch failed' }
           python scripts/integrate_duel_lobby_v048.py
+          python scripts/improve_fly_teleport_v049.py
           if ($LASTEXITCODE -ne 0) { throw 'Duel lobby integration patch failed' }
       - name: Initialize MSVC x64 toolchain
         uses: ilammy/msvc-dev-cmd@v1
