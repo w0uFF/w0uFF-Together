@@ -13,7 +13,7 @@ gui=root/"src/gui/gui.cpp"
 content=gui.read_text(encoding="utf-8")
 feature_dir=root/"src/features"
 feature_dir.mkdir(parents=True,exist_ok=True)
-for name in ("duel_policy.hpp","duel_wire.hpp","steam_p2p_transport.hpp","duel_lobby_controller.hpp","solo_race_panel.hpp"):
+for name in ("duel_policy.hpp","duel_wire.hpp","steam_p2p_transport.hpp","duel_lobby_controller.hpp","solo_race_panel.hpp","custom_cut_panel.hpp"):
     copyfile(Path("duel")/name,feature_dir/name)
 
 def patch_one(old,new,label):
