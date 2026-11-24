@@ -84,7 +84,7 @@ patch('''		if (mod_cheats_allowed() && wouff::feature_registry::enabled(wouff::f
 		if (mod_cheats_allowed() && wouff::feature_registry::enabled(wouff::feature_id::fly_mode) && msg == WM_KEYUP && wparam == g_wouff_fly_mode.get_vk_value())''',"FLY_WHEEL")
 # Keep fixed known cuts untouched; custom checkpoints persist separately.
 patch('#include "features/duel_lobby_controller.hpp"',
-      '#include "features/duel_lobby_controller.hpp"\\n#include "features/custom_cut_panel.hpp"',
+      '#include "features/duel_lobby_controller.hpp"\n#include "features/custom_cut_panel.hpp"',
       "CUSTOM_CUT_HEADER")
 patch('''                            if (ImGui::CollapsingHeader("w0uFF Practice — Known Cuts", ImGuiTreeNodeFlags_DefaultOpen))''',
 '''                            static wouff::practice::custom_cut_panel s_custom_cuts;
