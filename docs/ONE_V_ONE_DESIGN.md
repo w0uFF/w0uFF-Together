@@ -66,3 +66,6 @@ The original exactly-two-player duel is now one configuration of a broader Race 
 
 ### CI caveat
 After commit `227b74306cc9cb46c5db6144b7cf360c68da7365`, GitHub Actions began failing immediately without job step logs. Treat this as an **unresolved build/CI blocker**, not proof of compiler failure or success. The original v0.4.8 tested by the user remains the last verified playable baseline.
+
+### Solo timer HUD follow-up
+The solo alpha now calls `solo_race_panel::tick()` on every renderer frame through `lobby_controller::tick()`, independently of multiplayer membership or tab selection. While active, a read-only, non-interactive remaining/elapsed-time HUD is rendered at the upper-right. Expiry stops the countdown even when the 1v1 panel is closed. This is **not** yet a movable HUD and does not expose verified height, finish signals, a persistent record or ranked results. UI compile and game testing remain required.
