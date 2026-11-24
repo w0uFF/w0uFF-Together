@@ -25,6 +25,12 @@ public:
         if (!loaded_) { loaded_=true; path_=path; load(); }
         if (!ImGui::CollapsingHeader("My custom cut checkpoints", ImGuiTreeNodeFlags_DefaultOpen))
             return;
+        if (load_error_)
+        {
+            ImGui::TextColored(ImVec4(1,.4f,.4f,1),
+                "Invalid custom checkpoints file: edits disabled to protect existing data.");
+            return;
+        }
         ImGui::TextDisabled("Create, rename, delete or teleport to a saved cut. Stored locally.");
         ImGui::InputText("Checkpoint name", &name_);
         if (ImGui::Button("Create checkpoint here"))
