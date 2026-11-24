@@ -9,6 +9,8 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <stdexcept>
+#include <utility>
 
 namespace wouff::practice
 {
