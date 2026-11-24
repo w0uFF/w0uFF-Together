@@ -44,3 +44,15 @@ jobs:
               print('===',a+1,b,'===')
               for i in range(a,b): print(f'{i+1:04d} {lines[i][:260]}')
           PY
+          python3 - <<'PY'
+          from pathlib import Path
+          sdk=next(Path('w0uFF-Together/src').rglob('CppSDK/SDK'))
+          for name in ('Engine_classes.hpp','BP_Character_classes.hpp','Engine_structs.hpp'):
+              p=sdk/name
+              if not p.exists():continue
+              s=p.read_text(errors='replace').splitlines()
+              keys=('MaxFlySpeed','AddMovementInput','CharacterMovement;','GetCharacterMovement','MoveUpdatedComponent','MaxAcceleration','GetMovementComponent','GetLastMovementInputVector','MovementMode')
+              for i,line in enumerate(s):
+                  if any(x in line for x in keys):
+                      print(name,i+1,line[:230])
+          PY
