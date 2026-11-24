@@ -56,3 +56,25 @@ jobs:
                   if any(x in line for x in keys):
                       print(name,i+1,line[:230])
           PY
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('w0uFF-Together/src/gui/gui.cpp')
+          lines=p.read_text().splitlines()
+          terms=('request_teleport','g_teleports.consume','TeleportTo','K2_SetActorLocation','SetActorLocation','practice_cuts','selected_practice_cut','Create cut','Save cut','cut_name','save_practice_checkpoints','load_practice_checkpoints','g_pawn->GetVelocity','g_pawn->CharacterMovement')
+          spans=[]
+          for i,line in enumerate(lines):
+              if any(t in line for t in terms):spans.append((max(0,i-13),min(len(lines),i+25)))
+          combined=[]
+          for a,b in sorted(spans):
+              if combined and a<=combined[-1][1]:combined[-1]=(combined[-1][0],max(combined[-1][1],b))
+              else:combined.append((a,b))
+          for a,b in combined:
+              print('=== TELEPORT/CUT',a+1,b,'===')
+              for i in range(a,b):print(f'{i+1:04d} {lines[i][:230]}')
+          sdk=next(Path('w0uFF-Together/src').rglob('CppSDK/SDK'))
+          for name in ('Engine_classes.hpp','BP_Character_classes.hpp'):
+              lines=(sdk/name).read_text(errors='replace').splitlines()
+              for i,line in enumerate(lines):
+                  if any(k in line for k in ('StopMovementImmediately','Velocity;', 'SetPhysicsLinearVelocity','SetAllPhysicsLinearVelocity','SetMovementMode')):print('SDK',name,i+1,line[:230])
+          PY
+
