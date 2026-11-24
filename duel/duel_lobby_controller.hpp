@@ -126,7 +126,18 @@ namespace wouff::duel
                     parse_id(session_text_)!=0)
                     begin_guest();
                 if (!eligible) ImGui::EndDisabled();
-                ImGui::TextDisabled("First create/join the game's normal private two-player lobby.");
+                if (!game_instance_known)
+                    ImGui::TextDisabled("Waiting for the native game lobby.");
+                else if (player_count != 2)
+                    ImGui::TextDisabled("Multiplayer staging requires two participants (solo timer is available above).");
+                else if (parse_id(peer_text_) == 0)
+                    ImGui::TextColored(ImVec4(1.f,.75f,.4f,1.f),
+                        "Two players detected. Enter your opponent\'s Steam ID64 to stage rules.");
+                else if (parse_id(peer_text_) == net_.local_steam_id())
+                    ImGui::TextDisabled("Opponent Steam ID must differ from your own.");
+                else if (!net_.available())
+                    ImGui::TextDisabled("Steam P2P unavailable; retry the API.");
+                ImGui::TextDisabled("Staging only syncs rules; physical chain detach and race start are not implemented.");
             }
             else
             {
