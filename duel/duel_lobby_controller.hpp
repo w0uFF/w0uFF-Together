@@ -36,6 +36,7 @@ namespace wouff::duel
         // Only a read-only renderer-thread operation; doesn't access UE.
         void tick(bool game_instance_known, bool local_is_host, int player_count)
         {
+            solo_.tick(); // independent of the multiplayer gate and tab visibility
             // A stale or migrated lobby must never leave cheat permission
             // enabled. Host identity and roster are obtained from game-thread
             // POD; they are never inferred from a client-sent Steam message.
