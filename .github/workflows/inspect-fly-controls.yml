@@ -1,0 +1,46 @@
+name: Inspect Fly movement and input anchors
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-fly-controls.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct source and print Fly input/movement paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q -o wouff-source-v042.zip
+          python3 - <<'PY'
+          import base64,gzip
+          from pathlib import Path
+          Path('runtime-v043.patch').write_bytes(gzip.decompress(base64.b64decode(Path('patches/runtime-v043.patch.gz.b64').read_bytes())))
+          PY
+          git apply runtime-v043.patch
+          git apply patches/v043-msvc-build-fix.patch
+          python3 scripts/instrument_player_resolver_v044.py
+          python3 scripts/resolve_reference_world_v045.py
+          python3 scripts/patch_gobjects_v046.py
+          python3 scripts/polish_hud_console_v047.py
+          python3 scripts/integrate_duel_lobby_v048.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('w0uFF-Together/src/gui/gui.cpp')
+          lines=p.read_text().splitlines()
+          terms=('effective_fly','SetFlyMode','g_wouff_fly_mode_state','WM_MOUSEWHEEL','g_wouff_fly_mode','fly_speed','Fly Speed','VK_SPACE','VK_CONTROL','GetAsyncKeyState','AddMovementInput','AddActorWorldOffset','Flying')
+          spans=[]
+          for i,line in enumerate(lines):
+              if any(t in line for t in terms):
+                  spans.append((max(0,i-15),min(len(lines),i+22)))
+          result=[]
+          for a,b in sorted(spans):
+              if result and a<=result[-1][1]: result[-1]=(result[-1][0],max(result[-1][1],b))
+              else:result.append((a,b))
+          for a,b in result:
+              print('===',a+1,b,'===')
+              for i in range(a,b): print(f'{i+1:04d} {lines[i][:260]}')
+          PY
