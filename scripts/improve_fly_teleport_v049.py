@@ -99,5 +99,12 @@ patch('''                            if (ImGui::CollapsingHeader("w0uFF Practice
                                 });
                             if (ImGui::CollapsingHeader("w0uFF Practice — Known Cuts", ImGuiTreeNodeFlags_DefaultOpen))''',
 "CUSTOM_CUT_UI")
+# The generated BP_Character type has no direct CharacterMovement member.
+# Query Unreal's pawn movement component and verify the runtime class first.
+if s.count("g_pawn->CharacterMovement") < 5:
+    raise AssertionError("Unexpected Fly movement API anchors")
+s=s.replace("g_pawn->CharacterMovement",
+    "(g_pawn->GetMovementComponent() && g_pawn->GetMovementComponent()->IsA(SDK::UCharacterMovementComponent::StaticClass()) ? "
+    "static_cast<SDK::UCharacterMovementComponent*>(g_pawn->GetMovementComponent()) : nullptr)")
 p.write_text(s,encoding="utf-8")
 print("Fly: adjustable speed, wheel, Space/Ctrl world Z; teleport clears local velocity")
