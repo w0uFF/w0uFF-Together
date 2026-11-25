@@ -1,4 +1,4 @@
-name: w0uFF Together v0.4.8 - Player Resolver Diagnostics
+name: w0uFF Together - Windows build and development release
 on:
   push:
     branches: [main]
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   tests:
@@ -51,14 +51,6 @@ jobs:
           cmake -S w0uFF-Together -B build-tests -DWOUFF_TESTS_ONLY=ON
           cmake --build build-tests --parallel 2
           ctest --test-dir build-tests --output-on-failure
-      - name: Package patched GPL source
-        shell: bash
-        run: zip -q -r wouff-source-v048.zip w0uFF-Together
-      - uses: actions/upload-artifact@v4
-        with:
-          name: w0uFF-Together-v0.4.8-source
-          path: wouff-source-v048.zip
-          if-no-files-found: error
 
   build:
     name: Compile Windows x64 v0.4.8 Steam duel staging
@@ -140,8 +132,38 @@ jobs:
           Copy-Item $dll dist/d3d12.dll
           Get-FileHash dist/d3d12.dll -Algorithm SHA256 | Format-List
           Write-Host 'DLL compiled but gameplay and co-op remain UNVERIFIED'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: w0uFF-Together-v0.4.8-Windows-DLL-unverified
-          path: dist/d3d12.dll
-          if-no-files-found: error
+      - name: Package rebuilt GPL source and binary checksums
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceDir = 'dist/rebuilt-source'
+          New-Item -ItemType Directory -Path $sourceDir -Force | Out-Null
+          Copy-Item 'w0uFF-Together/src' $sourceDir -Recurse
+          foreach ($file in @('CMakeLists.txt','NOTICE.md','LICENSE','README.md')) {
+            $candidate = Join-Path 'w0uFF-Together' $file
+            if (Test-Path $candidate) { Copy-Item $candidate $sourceDir }
+          }
+          Compress-Archive -Path "$sourceDir/*" -DestinationPath dist/rebuilt-source.zip -Force
+          $binaryHash = (Get-FileHash dist/d3d12.dll -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sourceHash = (Get-FileHash dist/rebuilt-source.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          @("$binaryHash  d3d12.dll", "$sourceHash  rebuilt-source.zip") |
+            Set-Content dist/SHA256SUMS.txt -Encoding ascii
+      - name: Publish GitHub development prerelease (never on failed builds)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # A unique tag per successful workflow execution; no mutable latest tag.
+          $tag = "dev-${{ github.run_number }}-${{ github.run_attempt }}"
+          $notes = @"
+          Development build for commit ${{ github.sha }}.
+          Windows x64. Automated compilation, PE export and source tests passed.
+          Gameplay, Fly controls, checkpoint editing and multiplayer are NOT verified in game.
+          Review NOTICE.md / LICENSE and source archives for GPL provenance.
+          "@
+          gh release create $tag dist/d3d12.dll dist/rebuilt-source.zip dist/SHA256SUMS.txt `
+            --target "${{ github.sha }}" `
+            --title "w0uFF Together $tag (experimental)" `
+            --prerelease --notes $notes
+          if ($LASTEXITCODE -ne 0) { throw "GitHub release publication failed" }
