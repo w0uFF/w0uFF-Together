@@ -19,7 +19,7 @@ w0uFF Together includes a **Practice Studio** for practicing cuts, moving around
    ```
    In Steam, you can find the game directory via **Chained Together → Properties → Installed Files → Browse**.
 3. **Copy `d3d12.dll` into the `Win64` folder.** If the file already exists, back it up before replacing it.
-4. Launch the game normally through Steam.
+4. Launch the game with dx12 through Steam.
 5. Press **`INSERT`** in-game to open the w0uFF Together menu.
 
 > [!NOTE]
