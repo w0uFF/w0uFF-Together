@@ -156,3 +156,6 @@ jobs:
             --title "w0uFF Together $tag (experimental)" `
             --prerelease --notes $notes
           if ($LASTEXITCODE -ne 0) { throw "GitHub release publication failed" }
+          # GITHUB_TOKEN-authored README changes do not retrigger push workflows.
+          python scripts/update_release_readme.py $tag
+          if ($LASTEXITCODE -ne 0) { throw "README download link synchronization failed" }
