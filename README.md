@@ -1,3 +1,5 @@
+DL https://github.com/w0uFF/w0uFF-Together/releases/download/dev-28-1/d3d12.dll
+
 # w0uFF Together is a updated version of unchained together (by xiaoxiao921) but with new feature and improvement
 
 **Practice Studio for Chained Together** — Windows x64 (DirectX 12).
