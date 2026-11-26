@@ -12,7 +12,7 @@ w0uFF Together includes a **Practice Studio** for practicing cuts, moving around
 ## Installation
 
 1. **Download `d3d12.dll`** from the [latest GitHub Release](https://github.com/w0uFF/w0uFF-Together/releases).  
-   **Direct download (dev-28-1):** [d3d12.dll](https://github.com/w0uFF/w0uFF-Together/releases/download/dev-28-1/d3d12.dll)
+   **Direct download (dev-29-1):** [d3d12.dll](https://github.com/w0uFF/w0uFF-Together/releases/download/dev-29-1/d3d12.dll)
 2. Open your Chained Together game folder:
    ```text
    Steam\steamapps\common\ChainedTogether\ChainedTogether\Binaries\Win64
@@ -23,7 +23,7 @@ w0uFF Together includes a **Practice Studio** for practicing cuts, moving around
 5. Press **`INSERT`** in-game to open the w0uFF Together menu.
 
 > [!NOTE]
-> The direct download above points to a specific development build. For newer versions, use the [Releases page](https://github.com/w0uFF/w0uFF-Together/releases).
+> This direct download is automatically updated after each successful development Release. Previous builds remain available from the [Releases page](https://github.com/w0uFF/w0uFF-Together/releases).
 
 ## Features
 
