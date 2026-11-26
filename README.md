@@ -1,4 +1,4 @@
-# w0uFF Together updated version of unchained together (by xiaoxiao921) but with new feature and improvement
+# w0uFF Together is a updated version of unchained together (by xiaoxiao921) but with new feature and improvement
 
 **Practice Studio for Chained Together** — Windows x64 (DirectX 12).
 
