@@ -1,14 +1,66 @@
-DL https://github.com/w0uFF/w0uFF-Together/releases/download/dev-28-1/d3d12.dll
+# w0uFF Together
 
-# w0uFF Together is a updated version of unchained together (by xiaoxiao921) but with new feature and improvement
+**An updated and expanded version of [UnchainedTogether](https://github.com/xiaoxiao921/UnchainedTogether) by [xiaoxiao921](https://github.com/xiaoxiao921), with new features and improvements for Chained Together.**
 
-**Practice Studio for Chained Together** — Windows x64 (DirectX 12).
+w0uFF Together includes a **Practice Studio** for practicing cuts, moving around the map and exploring experimental Race features.
 
-1. The source archive `wouff-source-v042.zip` is already committed to this repository. Leave the existing `wouff-vendor-*.zip` archives unchanged.
-2. The GitHub Actions workflow `wouff-windows-build.yml` produced the v0.4.2 Windows DLL in run #3.
-3. After the automated Windows build and checks succeed, download `d3d12.dll` from the latest **development prerelease** in [GitHub Releases](https://github.com/w0uFF/w0uFF-Together/releases). Each successful build creates a unique `dev-<run>-<attempt>` prerelease with the rebuilt source ZIP and `SHA256SUMS.txt`. Unverified gameplay builds remain labeled experimental; a failed build does not create a release.
-4. Back up your existing working DLL before testing in a private game. Open `INSERT → Settings`; check Unreal tick callbacks and local pawn status before enabling Fly / Teleport. Send these diagnostic results if gameplay actions remain inactive.
+**Platform:** Windows x64 · DirectX 12 · Chained Together 1.11.2
 
-## Source and licensing
+> [!IMPORTANT]
+> This mod is in active development. Some features, especially multiplayer Race mode, are experimental and are not yet fully playable.
 
-The source archive contains GPL-3.0 license and `NOTICE.md`. w0uFF Together includes new w0uFF-specific work and reuses GPL-licensed UnchainedTogether code originally by xiaoxiao921. Its source and attribution are retained according to the original license, together with notices for bundled third-party dependencies.
+## Installation
+
+1. **Download `d3d12.dll`** from the [latest GitHub Release](https://github.com/w0uFF/w0uFF-Together/releases).  
+   **Direct download (dev-28-1):** [d3d12.dll](https://github.com/w0uFF/w0uFF-Together/releases/download/dev-28-1/d3d12.dll)
+2. Open your Chained Together game folder:
+   ```text
+   Steam\steamapps\common\ChainedTogether\ChainedTogether\Binaries\Win64
+   ```
+   In Steam, you can find the game directory via **Chained Together → Properties → Installed Files → Browse**.
+3. **Copy `d3d12.dll` into the `Win64` folder.** If the file already exists, back it up before replacing it.
+4. Launch the game normally through Steam.
+5. Press **`INSERT`** in-game to open the w0uFF Together menu.
+
+> [!NOTE]
+> The direct download above points to a specific development build. For newer versions, use the [Releases page](https://github.com/w0uFF/w0uFF-Together/releases).
+
+## Features
+
+- **Practice / checkpoints:** Save positions and teleport back to practice difficult cuts. Development builds also include work on custom checkpoint management.
+- **Fly mode:** Toggle Fly with **`F7`**. Development builds introduce adjustable speed, mouse-wheel control, and camera-independent vertical movement (**`Space`** up / **`Ctrl`** down).
+- **Free camera and visuals:** Additional exploration and diagnostic tools, configurable from the mod menu.
+- **Race mode (experimental):** Early lobby and Steam networking work, plus a solo timer prototype. Chain detachment, authoritative competitive starts and multiplayer race results are **not yet fully implemented**.
+
+Features may vary by development release. Check the release notes and verify new controls in-game before relying on them.
+
+## Controls
+
+| Key | Action |
+| --- | --- |
+| `INSERT` | Open or close the mod menu |
+| `F7` | Toggle Fly (when the module is enabled) |
+| `F8` | Repeat the selected calibrated cut (when Teleport is enabled) |
+| `Space` / `Ctrl` | Fly up / down in builds that include the updated Fly controls |
+
+Modules can be enabled or disabled under **`INSERT → Settings`**.
+
+## Builds and downloads
+
+Windows development builds are published through **[GitHub Releases](https://github.com/w0uFF/w0uFF-Together/releases)** after automated checks succeed. A prerelease may include:
+
+- `d3d12.dll` — Windows x64 mod binary
+- `rebuilt-source.zip` — reconstructed GPL source
+- `SHA256SUMS.txt` — hashes for file integrity verification
+
+**A successful automated build does not mean every feature has been verified in-game.** Development releases are marked experimental.
+
+## Credits and licensing
+
+w0uFF Together is based on **[UnchainedTogether](https://github.com/xiaoxiao921/UnchainedTogether)**, originally created by **xiaoxiao921**. Thanks to the original author for making this project possible.
+
+w0uFF Together retains and extends GPL-licensed code from the original project and includes additional work by w0uFF. See the repository's `LICENSE` and `NOTICE.md` for the GPL-3.0 terms, attribution and notices for included third-party components.
+
+## Feedback and issues
+
+Found a bug or a broken feature? [Open a GitHub issue](https://github.com/w0uFF/w0uFF-Together/issues) and include the release tag, game version, steps to reproduce and any relevant screenshots or error messages.
